@@ -287,6 +287,7 @@ tr:hover td{background:rgba(255,255,255,0.015);}
       <button class="nav-btn" onclick="nav('sales')" data-nav="sales"><i class="fas fa-receipt"></i> Sales</button>
       <button class="nav-btn admin-only" onclick="nav('products')" data-nav="products"><i class="fas fa-box-open"></i> Products</button>
       <button class="nav-btn admin-only" onclick="nav('team')" data-nav="team"><i class="fas fa-users"></i> Team</button>
+      <button class="nav-btn admin-only" onclick="nav('logs')" data-nav="logs"><i class="fas fa-history"></i> Logs</button>
     </div>
     <div class="topnav-right">
       <div class="sync-dot" title="Live sync"></div>
@@ -399,6 +400,61 @@ tr:hover td{background:rgba(255,255,255,0.015);}
           </table>
         </div>
       </div>
+      <div class="card" style="margin-top:1.5rem;">
+        <div class="card-hd"><span class="card-title"><i class="fas fa-lock" style="color:var(--accent);margin-right:0.4rem;font-size:0.85rem;"></i>Shop Device</span></div>
+        <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <div style="font-size:0.85rem;color:var(--muted);margin-bottom:0.3rem;">Stock edits (Add Stock) are restricted to the registered shop device only.</div>
+            <div style="font-size:0.78rem;color:var(--muted);">This device ID: <code style="background:var(--surface2);padding:0.15rem 0.4rem;border-radius:4px;font-size:0.75rem;" id="thisDeviceId"></code></div>
+          </div>
+          <button class="btn btn-accent" onclick="registerShopDevice()"><i class="fas fa-lock"></i> Set This As Shop Device</button>
+        </div>
+      </div>
+      <div class="card" style="margin-top:1.5rem;">
+        <div class="card-hd"><span class="card-title"><i class="fas fa-shield-alt" style="color:var(--warning);margin-right:0.4rem;font-size:0.85rem;"></i>Firebase Security Rules</span><button class="btn btn-ghost" onclick="copyRules()" style="padding:0.35rem 0.7rem;font-size:0.75rem;"><i class="fas fa-copy"></i> Copy</button></div>
+        <div class="card-body">
+          <div style="font-size:0.78rem;color:var(--muted);margin-bottom:0.75rem;">Paste these rules in your <strong style="color:var(--text);">Firebase Console → Realtime Database → Rules</strong> to lock down your database.</div>
+          <pre id="firebaseRulesBlock" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1rem;font-size:0.75rem;color:var(--accent);overflow-x:auto;line-height:1.6;">{
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null",
+
+    "inventory": {
+      ".write": "auth != null && root.child('users/' + auth.uid + '/role').val() !== 'worker'"
+    },
+
+    "settings": {
+      ".write": "root.child('users/' + auth.uid + '/role').val() === 'admin'"
+    },
+
+    "logs": {
+      ".write": "auth != null"
+    }
+  }
+}</pre>
+        </div>
+      </div>
+    </section>
+    <section id="sec-logs" class="section">
+      <div class="page-hd">
+        <div><div class="page-title">Activity Logs</div><div class="page-sub">All stock and sales actions — last 200 entries</div></div>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+          <select id="logsFilter" onchange="renderLogs()" style="padding:0.55rem 0.9rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;">
+            <option value="">All actions</option>
+            <option value="sale">Sales</option>
+            <option value="restock">Restocks</option>
+          </select>
+          <input type="text" id="logsSearch" placeholder="Search product..." oninput="renderLogs()" style="padding:0.55rem 0.9rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;width:180px;">
+        </div>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Time</th><th>Product</th><th>Color / Size</th><th>Change</th><th>Action</th><th>By</th></tr></thead>
+            <tbody id="logsBody"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
   </div>
@@ -411,6 +467,7 @@ tr:hover td{background:rgba(255,255,255,0.015);}
     <button class="mnb" onclick="nav('sales')" data-mnav="sales"><i class="fas fa-receipt"></i>Sales</button>
     <button class="mnb admin-only" onclick="nav('products')" data-mnav="products"><i class="fas fa-box-open"></i>Products</button>
     <button class="mnb admin-only" onclick="nav('team')" data-mnav="team"><i class="fas fa-users"></i>Team</button>
+    <button class="mnb admin-only" onclick="nav('logs')" data-mnav="logs"><i class="fas fa-history"></i>Logs</button>
   </div>
 </div>
 
@@ -593,6 +650,14 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const auth = firebase.auth();
 
+// Safety net: if loading takes > 8 seconds, show login anyway
+setTimeout(()=>{
+  if(document.getElementById('loadingScreen').style.display!=='none'){
+    document.getElementById('loadingScreen').style.display='none';
+    document.getElementById('authScreen').style.display='flex';
+  }
+}, 8000);
+
 // ===== CLOUDINARY =====
 const CL_CLOUD = 'dudmafqmp', CL_PRESET = 'jlblujj2';
 async function uploadImage(file) {
@@ -614,23 +679,33 @@ const CHEX = {Black:'#1a1a1a',White:'#f5f5f5',Grey:'#9ca3af',Brown:'#92400e',Bei
 let currentUser=null, currentUserData=null, currentRole=null;
 let inventory={}, sales=[], shopName='LETAX';
 let colorEntryCount=0, addStockCtx={}, editingCode=null;
+let logs=[], shopDeviceId=null;
+
+// ===== DEVICE LOCK =====
+function getDeviceId(){
+  let id=localStorage.getItem('deviceId');
+  if(!id){id='dev-'+Math.random().toString(36).substr(2,9);localStorage.setItem('deviceId',id);}
+  return id;
+}
+function isShopDevice(){return getDeviceId()===shopDeviceId;}
+function canEditStock(){return (currentRole==='admin'||currentRole==='manager')&&isShopDevice();}
+
+function registerShopDevice(){
+  if(currentRole!=='admin'){toast('Only admin can register device','err');return;}
+  db.ref('settings/shopDevice').set({deviceId:getDeviceId(),registeredBy:currentUserData.name,timestamp:Date.now()});
+  toast('Shop device registered ✓','ok');
+}
 
 // ===== AUTH =====
 auth.onAuthStateChanged(user => {
-  if (user) loadUser(user.uid);
-  else {
-    // Check if any admin account exists yet (first-time setup)
-    db.ref('users').orderByChild('role').equalTo('admin').limitToFirst(1).once('value', snap => {
-      const hasAdmin = snap.exists();
-      document.getElementById('loadingScreen').style.display='none';
-      document.getElementById('authScreen').style.display='flex';
-      if (!hasAdmin) {
-        // First launch: show setup banner and register form instead of login
-        document.getElementById('setupBanner').style.display='block';
-        document.getElementById('loginPanel').style.display='none';
-        document.getElementById('registerPanel').style.display='block';
-      }
-    });
+  if (user) {
+    loadUser(user.uid);
+  } else {
+    // Rules require auth != null to read, so we cannot query the DB here.
+    // Simply show the login screen. The register panel is hidden by default
+    // (public registration is disabled once an admin exists).
+    document.getElementById('loadingScreen').style.display='none';
+    document.getElementById('authScreen').style.display='flex';
   }
 });
 
@@ -648,18 +723,12 @@ function doRegister() {
   const shop=V('regShop'),name=V('regName'),email=V('regEmail'),pass=V('regPassword');
   if (!shop||!name||!email||!pass||pass.length<6){showErr('regError','Fill all fields (password min 6 chars)');return;}
   document.getElementById('loadingScreen').style.display='flex';
-  // Server-side guard: only allow if no admin exists yet
-  db.ref('users').orderByChild('role').equalTo('admin').limitToFirst(1).once('value', snap => {
-    if (snap.exists()) {
-      document.getElementById('loadingScreen').style.display='none';
-      showErr('regError','An admin account already exists. Ask your admin to add you from the Team panel.');
-      return;
-    }
-    auth.createUserWithEmailAndPassword(email,pass)
-      .then(c=>db.ref('users/'+c.user.uid).set({name,email,role:'admin',shopName:shop,createdAt:firebase.database.ServerValue.TIMESTAMP}))
-      .then(()=>db.ref('shop').set({name:shop}))
-      .catch(e=>{document.getElementById('loadingScreen').style.display='none';showErr('regError',e.message);});
-  });
+  // Create admin account directly — the app only shows the register panel
+  // when no admin exists yet (controlled by the admin via the HTML).
+  auth.createUserWithEmailAndPassword(email,pass)
+    .then(c=>db.ref('users/'+c.user.uid).set({name,email,role:'admin',shopName:shop,createdAt:firebase.database.ServerValue.TIMESTAMP}))
+    .then(()=>db.ref('shop').set({name:shop}))
+    .catch(e=>{document.getElementById('loadingScreen').style.display='none';showErr('regError',e.message);});
 }
 
 function doLogout(){auth.signOut().then(()=>location.reload());}
@@ -682,6 +751,8 @@ function loadUser(uid) {
     document.getElementById('app').style.display='block';
     document.getElementById('loadingScreen').style.display='none';
     document.getElementById('salesDate').valueAsDate=new Date();
+    const devEl=document.getElementById('thisDeviceId');
+    if(devEl) devEl.textContent=getDeviceId();
     setupListeners();
   });
 }
@@ -699,6 +770,15 @@ function setupListeners(){
     renderSales(); renderActivity(); updateStats();
   });
   if (currentRole==='admin') db.ref('users').on('value',snap=>renderTeam(snap.val()));
+  db.ref('settings/shopDevice').on('value',snap=>{
+    const d=snap.val(); if(d) shopDeviceId=d.deviceId;
+  });
+  db.ref('logs').limitToLast(200).on('value',snap=>{
+    logs=[];
+    snap.forEach(c=>logs.push({id:c.key,...c.val()}));
+    logs.reverse();
+    renderLogs();
+  });
 }
 
 // ===== NAV =====
@@ -892,6 +972,7 @@ function prevImg(id){
 }
 
 async function saveProduct(){
+  if(currentRole!=='admin'){toast('Only admin can manage products','err');return;}
   const code=V('pm-code').trim().toUpperCase();
   const name=V('pm-name').trim();
   const price=parseFloat(V('pm-price'));
@@ -922,6 +1003,7 @@ async function saveProduct(){
 
 // ===== ADD STOCK =====
 function openAddStockModal(code,color){
+  if(!canEditStock()){toast('Only shop device can add stock','err');return;}
   const p=inventory[code]; if (!p) return;
   const data=p.colors[color]||{};
   const sz=p.type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
@@ -947,6 +1029,7 @@ function calcASTotal(){
 }
 
 function saveAddStock(){
+  if(!canEditStock()){toast('Only shop device can add stock','err');return;}
   const {code,color}=addStockCtx;
   const p=inventory[code]; if (!p) return;
   const sz=p.type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
@@ -958,6 +1041,7 @@ function saveAddStock(){
   if (!total){toast('Enter at least one quantity','err');return;}
   db.ref().update(updates)
     .then(()=>db.ref('stockMovements').push({type:'arrival',productCode:code,productName:p.name,color,totalAdded:total,supplier:V('as-supplier')||'—',invoice:V('as-invoice')||'—',user:currentUserData.name||currentUserData.email,timestamp:firebase.database.ServerValue.TIMESTAMP,date:new Date().toISOString()}))
+    .then(()=>db.ref('logs').push({productName:p.name,color,size:'—',change:total,action:'restock',userName:currentUserData.name||currentUserData.email,timestamp:Date.now()}))
     .then(()=>{closeModal('addStockModal');toast(`Added ${total} units to ${p.name} ${color}`,'ok');})
     .catch(e=>toast('Error: '+e.message,'err'));
 }
@@ -998,6 +1082,7 @@ function processSale(){
   if (current<=0){toast('Out of stock!','err');return;}
   db.ref(`inventory/${code}/colors/${color}/${size}`).set(current-1)
     .then(()=>db.ref('sales').push({productCode:code,productName:p.name,productType:p.type,color,size,price:p.unitPrice||0,customer,payment,soldBy:currentUser.uid,soldByName:currentUserData.name||currentUserData.email,date:new Date().toISOString(),timestamp:firebase.database.ServerValue.TIMESTAMP}))
+    .then(()=>db.ref('logs').push({productName:p.name,color,size,change:-1,action:'sale',userName:currentUserData.name||currentUserData.email,timestamp:Date.now()}))
     .then(()=>{closeModal('sellModal');toast(`Sale recorded — ${p.name} ${size} to ${customer}`,'ok');})
     .catch(e=>toast('Error: '+e.message,'err'));
 }
@@ -1087,6 +1172,9 @@ function quickSell(code, color, size, cell){
   if (currentRole !== 'admin' && currentRole !== 'manager') {
     toast('Only admins and managers can record sales here','err'); return;
   }
+  if (!isShopDevice()) {
+    toast('Only the registered shop device can record sales here','err'); return;
+  }
   const p = inventory[code]; if (!p) return;
   const current = p.colors?.[color]?.[size] || 0;
   if (current <= 0){ toast('Out of stock!','err'); return; }
@@ -1103,6 +1191,7 @@ function quickSell(code, color, size, cell){
           soldBy:currentUser.uid, soldByName:currentUserData.name||currentUserData.email,
           date:new Date().toISOString(), timestamp:firebase.database.ServerValue.TIMESTAMP
         }))
+        .then(()=>db.ref('logs').push({productName:p.name,color,size,change:-1,action:'sale (quick)',userName:currentUserData.name||currentUserData.email,timestamp:Date.now()}))
         .then(()=>toast('Sale recorded — '+p.name+' '+color+' sz'+size,'ok'))
         .catch(e=>toast('Error: '+e.message,'err'));
     }
@@ -1192,7 +1281,32 @@ function renderTeam(users){
     </tr>`).join('');
 }
 
+// ===== LOGS =====
+function renderLogs(){
+  const el=E('logsBody');
+  if(!el)return;
+  const filterAction=(E('logsFilter')?.value||'').toLowerCase();
+  const filterSearch=(E('logsSearch')?.value||'').toLowerCase();
+  let filtered=logs;
+  if(filterAction) filtered=filtered.filter(l=>(l.action||'').toLowerCase().includes(filterAction));
+  if(filterSearch) filtered=filtered.filter(l=>(l.productName||'').toLowerCase().includes(filterSearch)||(l.userName||'').toLowerCase().includes(filterSearch));
+  if(!filtered.length){el.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--muted);">${logs.length?'No matching logs':'No logs yet'}</td></tr>`;return;}
+  el.innerHTML=filtered.map(l=>`
+    <tr>
+      <td style="color:var(--muted);font-size:0.78rem;">${new Date(l.timestamp).toLocaleString()}</td>
+      <td style="font-weight:500;">${l.productName||'—'}</td>
+      <td style="color:var(--muted);font-size:0.8rem;">${l.color||'—'}${l.size&&l.size!=='—'?' / '+l.size:''}</td>
+      <td style="font-weight:700;color:${l.change>0?'var(--success)':'var(--danger)'};">${l.change>0?'+':''}${l.change}</td>
+      <td><span class="badge ${l.action==='sale'||l.action==='sale (quick)'?'b-green':l.action==='restock'?'b-accent':'b-muted'}">${l.action}</span></td>
+      <td style="color:var(--muted);font-size:0.8rem;">${l.userName||'—'}</td>
+    </tr>`).join('');
+}
+
 // ===== UTILS =====
+function copyRules(){
+  const txt=E('firebaseRulesBlock')?.textContent||'';
+  navigator.clipboard.writeText(txt).then(()=>toast('Rules copied to clipboard','ok')).catch(()=>toast('Copy failed — select and copy manually','err'));
+}
 function E(id){return document.getElementById(id);}
 function V(id){return (E(id)?.value||'').trim();}
 function toast(msg,type='ok'){
