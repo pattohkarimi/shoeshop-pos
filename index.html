@@ -3,9 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShoeShop POS - Inventory & Sales Management</title>
+    <title>ShoeShop POS - Cloud Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK v8 (Compat) - Simpler for single-file apps -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    
     <style>
         :root {
             --primary: #2563eb;
@@ -22,12 +28,8 @@
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
             font-family: 'Inter', sans-serif;
             background: var(--light);
@@ -35,10 +37,7 @@
             line-height: 1.6;
         }
 
-        .app-container {
-            display: flex;
-            min-height: 100vh;
-        }
+        .app-container { display: flex; min-height: 100vh; }
 
         /* Sidebar */
         .sidebar {
@@ -48,7 +47,6 @@
             position: fixed;
             height: 100vh;
             overflow-y: auto;
-            transition: transform 0.3s;
             z-index: 1000;
         }
 
@@ -58,20 +56,10 @@
             text-align: center;
         }
 
-        .sidebar-header h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
+        .sidebar-header h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .sidebar-header p { font-size: 0.875rem; opacity: 0.7; }
 
-        .sidebar-header p {
-            font-size: 0.875rem;
-            opacity: 0.7;
-        }
-
-        .nav-menu {
-            padding: 1rem 0;
-        }
+        .nav-menu { padding: 1rem 0; }
 
         .nav-item {
             padding: 1rem 2rem;
@@ -88,9 +76,30 @@
             border-left-color: var(--primary);
         }
 
-        .nav-item i {
-            width: 20px;
-            text-align: center;
+        .nav-item i { width: 20px; text-align: center; }
+
+        /* Connection Status */
+        .connection-status {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-online { background: var(--success); color: white; }
+        .status-offline { background: var(--danger); color: white; }
+        .status-syncing { background: var(--warning); color: white; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
         /* Main Content */
@@ -109,16 +118,7 @@
             border-bottom: 1px solid var(--border);
         }
 
-        .header h2 {
-            font-size: 1.875rem;
-            font-weight: 700;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
+        .header h2 { font-size: 1.875rem; font-weight: 700; }
 
         .badge {
             padding: 0.5rem 1rem;
@@ -127,30 +127,9 @@
             font-weight: 500;
         }
 
-        .badge-admin {
-            background: var(--primary);
-            color: white;
-        }
-
-        .badge-worker {
-            background: var(--success);
-            color: white;
-        }
-
-        .badge-danger {
-            background: var(--danger);
-            color: white;
-        }
-
-        .badge-warning {
-            background: var(--warning);
-            color: white;
-        }
-
-        .badge-info {
-            background: var(--info);
-            color: white;
-        }
+        .badge-admin { background: var(--primary); color: white; }
+        .badge-worker { background: var(--success); color: white; }
+        .badge-danger { background: var(--danger); color: white; }
 
         /* Cards */
         .stats-grid {
@@ -168,10 +147,7 @@
             transition: transform 0.2s;
         }
 
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
 
         .stat-header {
             display: flex;
@@ -194,18 +170,9 @@
         .stat-icon.green { background: #d1fae5; color: var(--success); }
         .stat-icon.orange { background: #fef3c7; color: var(--warning); }
         .stat-icon.red { background: #fee2e2; color: var(--danger); }
-        .stat-icon.cyan { background: #cffafe; color: var(--info); }
 
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-        }
-
-        .stat-label {
-            color: var(--secondary);
-            font-size: 0.875rem;
-        }
+        .stat-value { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; }
+        .stat-label { color: var(--secondary); font-size: 0.875rem; }
 
         /* Tables */
         .card {
@@ -224,19 +191,11 @@
             align-items: center;
         }
 
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
+        .card-title { font-size: 1.25rem; font-weight: 600; }
 
-        .table-container {
-            overflow-x: auto;
-        }
+        .table-container { overflow-x: auto; }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+        table { width: 100%; border-collapse: collapse; }
 
         th, td {
             padding: 1rem 1.5rem;
@@ -253,9 +212,7 @@
             color: var(--secondary);
         }
 
-        tr:hover {
-            background: #f8fafc;
-        }
+        tr:hover { background: #f8fafc; }
 
         .product-img {
             width: 60px;
@@ -297,36 +254,11 @@
             font-size: 0.875rem;
         }
 
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-        }
-
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-
-        .btn-secondary {
-            background: var(--secondary);
-            color: white;
-        }
-
-        .btn-info {
-            background: var(--info);
-            color: white;
-        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: var(--secondary); color: white; }
 
         /* Forms */
         .form-grid {
@@ -362,10 +294,6 @@
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
 
-        select.form-control {
-            cursor: pointer;
-        }
-
         /* Modal */
         .modal {
             display: none;
@@ -381,9 +309,7 @@
             backdrop-filter: blur(4px);
         }
 
-        .modal.active {
-            display: flex;
-        }
+        .modal.active { display: flex; }
 
         .modal-content {
             background: white;
@@ -395,19 +321,9 @@
             animation: slideUp 0.3s;
         }
 
-        .modal-content.large {
-            max-width: 1000px;
-        }
-
         @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .modal-header {
@@ -418,9 +334,7 @@
             align-items: center;
         }
 
-        .modal-body {
-            padding: 1.5rem;
-        }
+        .modal-body { padding: 1.5rem; }
 
         .close-btn {
             background: none;
@@ -434,15 +348,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s;
         }
 
-        .close-btn:hover {
-            background: var(--light);
-            color: var(--dark);
-        }
+        .close-btn:hover { background: var(--light); color: var(--dark); }
 
-        /* Product Cards for POS */
+        /* Product Cards */
         .products-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -473,9 +383,7 @@
             background: #f1f5f9;
         }
 
-        .product-details {
-            padding: 1.5rem;
-        }
+        .product-details { padding: 1.5rem; }
 
         .product-code {
             font-size: 0.875rem;
@@ -484,11 +392,7 @@
             margin-bottom: 0.5rem;
         }
 
-        .product-name {
-            font-size: 1.125rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
+        .product-name { font-size: 1.125rem; font-weight: 600; margin-bottom: 0.5rem; }
 
         .product-meta {
             display: flex;
@@ -497,11 +401,7 @@
             margin-top: 1rem;
         }
 
-        .price-tag {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
+        .price-tag { font-size: 1.25rem; font-weight: 700; color: var(--primary); }
 
         .stock-badge {
             padding: 0.25rem 0.75rem;
@@ -510,7 +410,7 @@
             font-weight: 500;
         }
 
-        /* Size Selector */
+        /* Size & Color Selectors */
         .size-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -528,29 +428,11 @@
             transition: all 0.2s;
         }
 
-        .size-btn:hover:not(:disabled) {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
+        .size-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+        .size-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .size-btn:disabled { opacity: 0.3; cursor: not-allowed; background: #f1f5f9; }
 
-        .size-btn.active {
-            background: var(--primary);
-            color: white;
-            border-color: var(--primary);
-        }
-
-        .size-btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-            background: #f1f5f9;
-        }
-
-        /* Color Selector */
-        .color-options {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
+        .color-options { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
 
         .color-btn {
             width: 32px;
@@ -562,55 +444,9 @@
             transition: all 0.2s;
         }
 
-        .color-btn.active {
-            box-shadow: 0 0 0 2px var(--primary);
-            transform: scale(1.1);
-        }
+        .color-btn.active { box-shadow: 0 0 0 2px var(--primary); transform: scale(1.1); }
 
-        /* Transaction Log */
-        .transaction-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            border-bottom: 1px solid var(--border);
-            transition: background 0.2s;
-        }
-
-        .transaction-item:hover {
-            background: #f8fafc;
-        }
-
-        .transaction-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-        }
-
-        .transaction-details {
-            flex: 1;
-        }
-
-        .transaction-title {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .transaction-meta {
-            font-size: 0.875rem;
-            color: var(--secondary);
-        }
-
-        .transaction-amount {
-            font-weight: 700;
-            font-size: 1.125rem;
-        }
-
-        /* Stock Input Specific Styles */
+        /* Stock Input Styles */
         .stock-input-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -626,15 +462,7 @@
             transition: all 0.3s;
         }
 
-        .stock-input-card:hover {
-            border-color: var(--primary);
-            background: white;
-        }
-
-        .stock-input-card.active {
-            border-color: var(--primary);
-            background: #eff6ff;
-        }
+        .stock-input-card:hover { border-color: var(--primary); background: white; }
 
         .size-stock-input {
             display: flex;
@@ -679,15 +507,8 @@
             transition: all 0.3s;
         }
 
-        .adjustment-type-card:hover {
-            border-color: var(--primary);
-            background: #f8fafc;
-        }
-
-        .adjustment-type-card.active {
-            border-color: var(--primary);
-            background: #eff6ff;
-        }
+        .adjustment-type-card:hover { border-color: var(--primary); background: #f8fafc; }
+        .adjustment-type-card.active { border-color: var(--primary); background: #eff6ff; }
 
         .adjustment-type-card i {
             font-size: 2rem;
@@ -695,9 +516,7 @@
             color: var(--secondary);
         }
 
-        .adjustment-type-card.active i {
-            color: var(--primary);
-        }
+        .adjustment-type-card.active i { color: var(--primary); }
 
         .adjustment-reason {
             display: inline-flex;
@@ -709,11 +528,11 @@
             font-weight: 500;
         }
 
-        .reason-new-arrival { background: #dbeafe; color: var(--primary); }
-        .reason-restoration { background: #d1fae5; color: var(--success); }
+        .reason-arrival { background: #dbeafe; color: var(--primary); }
+        .reason-restock { background: #d1fae5; color: var(--success); }
         .reason-correction { background: #fef3c7; color: var(--warning); }
         .reason-damage { background: #fee2e2; color: var(--danger); }
-        .reason-return { background: #cffafe; color: var(--info); }
+        .reason-sale { background: #cffafe; color: var(--info); }
 
         /* Tabs */
         .tabs {
@@ -732,51 +551,8 @@
             transition: all 0.3s;
         }
 
-        .tab:hover {
-            color: var(--primary);
-        }
-
-        .tab.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-
-            .sidebar.active {
-                transform: translateX(0);
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .products-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .adjustment-type-selector {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Animations */
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .animate-pulse {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
+        .tab:hover { color: var(--primary); }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
 
         /* Login Screen */
         .login-container {
@@ -796,15 +572,9 @@
             max-width: 400px;
         }
 
-        .login-logo {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
+        .login-logo { text-align: center; margin-bottom: 2rem; }
 
-        .login-logo h1 {
-            font-size: 1.875rem;
-            color: var(--dark);
-        }
+        .login-logo h1 { font-size: 1.875rem; color: var(--dark); }
 
         .role-selector {
             display: grid;
@@ -822,15 +592,8 @@
             transition: all 0.3s;
         }
 
-        .role-card:hover {
-            border-color: var(--primary);
-            background: #f8fafc;
-        }
-
-        .role-card.active {
-            border-color: var(--primary);
-            background: #eff6ff;
-        }
+        .role-card:hover { border-color: var(--primary); background: #f8fafc; }
+        .role-card.active { border-color: var(--primary); background: #eff6ff; }
 
         .role-card i {
             font-size: 2rem;
@@ -838,23 +601,19 @@
             color: var(--secondary);
         }
 
-        .role-card.active i {
-            color: var(--primary);
-        }
+        .role-card.active i { color: var(--primary); }
 
-        /* Utility Classes */
+        /* Utility */
         .hidden { display: none !important; }
         .text-success { color: var(--success); }
         .text-danger { color: var(--danger); }
-        .text-warning { color: var(--warning); }
         .flex { display: flex; }
-        .items-center { align-items: center; }
         .gap-2 { gap: 0.5rem; }
         .mt-4 { margin-top: 1rem; }
         .mb-4 { margin-bottom: 1rem; }
         .w-full { width: 100%; }
 
-        /* Toast Notification */
+        /* Toast */
         .toast {
             position: fixed;
             bottom: 2rem;
@@ -871,23 +630,14 @@
             animation: slideIn 0.3s;
         }
 
-        .toast.show {
-            display: flex;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
+        .toast.show { display: flex; }
         .toast.success { background: var(--success); }
         .toast.error { background: var(--danger); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
 
         /* Quick Actions */
         .quick-actions {
@@ -907,10 +657,7 @@
             border: 2px solid transparent;
         }
 
-        .action-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-        }
+        .action-card:hover { border-color: var(--primary); transform: translateY(-2px); }
 
         .action-card i {
             font-size: 2rem;
@@ -918,43 +665,12 @@
             margin-bottom: 1rem;
         }
 
-        .action-card h3 {
-            font-size: 1.125rem;
-            margin-bottom: 0.5rem;
-        }
+        .action-card h3 { font-size: 1.125rem; margin-bottom: 0.5rem; }
+        .action-card p { font-size: 0.875rem; color: var(--secondary); }
 
-        .action-card p {
-            font-size: 0.875rem;
-            color: var(--secondary);
-        }
-
-        /* Batch Upload Area */
-        .upload-area {
-            border: 2px dashed var(--border);
-            border-radius: 12px;
-            padding: 3rem;
-            text-align: center;
-            transition: all 0.3s;
-            cursor: pointer;
-        }
-
-        .upload-area:hover {
-            border-color: var(--primary);
-            background: #f8fafc;
-        }
-
-        .upload-area i {
-            font-size: 3rem;
-            color: var(--secondary);
-            margin-bottom: 1rem;
-        }
-
-        /* History Timeline */
-        .timeline {
-            position: relative;
-            padding-left: 2rem;
-        }
-
+        /* Timeline */
+        .timeline { position: relative; padding-left: 2rem; }
+        
         .timeline::before {
             content: '';
             position: absolute;
@@ -965,10 +681,7 @@
             background: var(--border);
         }
 
-        .timeline-item {
-            position: relative;
-            padding-bottom: 2rem;
-        }
+        .timeline-item { position: relative; padding-bottom: 2rem; }
 
         .timeline-item::before {
             content: '';
@@ -983,66 +696,124 @@
             box-shadow: 0 0 0 2px var(--primary);
         }
 
-        .timeline-content {
-            background: #f8fafc;
-            padding: 1rem;
-            border-radius: 8px;
+        .timeline-content { background: #f8fafc; padding: 1rem; border-radius: 8px; }
+        .timeline-date { font-size: 0.875rem; color: var(--secondary); margin-bottom: 0.5rem; }
+        .timeline-title { font-weight: 600; margin-bottom: 0.25rem; }
+        .timeline-meta { font-size: 0.875rem; color: var(--secondary); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .products-grid { grid-template-columns: 1fr; }
+            .adjustment-type-selector { grid-template-columns: 1fr; }
         }
 
-        .timeline-date {
-            font-size: 0.875rem;
-            color: var(--secondary);
-            margin-bottom: 0.5rem;
+        /* Loading Spinner */
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
 
-        .timeline-title {
-            font-weight: 600;
-            margin-bottom: 0.25rem;
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 4000;
+            flex-direction: column;
+            gap: 1rem;
         }
 
-        .timeline-meta {
-            font-size: 0.875rem;
-            color: var(--secondary);
-        }
+        .loading-overlay.active { display: flex; }
     </style>
 </head>
 <body>
+
+    <!-- Connection Status -->
+    <div id="connectionStatus" class="connection-status status-syncing">
+        <i class="fas fa-sync fa-spin"></i> Connecting...
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p style="color: var(--secondary);">Loading from cloud...</p>
+    </div>
 
     <!-- Login Screen -->
     <div id="loginScreen" class="login-container">
         <div class="login-box">
             <div class="login-logo">
-                <i class="fas fa-shoe-prints fa-3x text-primary" style="color: var(--primary); margin-bottom: 1rem;"></i>
+                <i class="fas fa-shoe-prints fa-3x" style="color: var(--primary); margin-bottom: 1rem;"></i>
                 <h1>ShoeShop POS</h1>
-                <p style="color: var(--secondary); margin-top: 0.5rem;">Inventory & Sales Management</p>
+                <p style="color: var(--secondary); margin-top: 0.5rem;">Cloud Edition • Real-time Sync</p>
             </div>
 
-            <div class="role-selector">
-                <div class="role-card active" onclick="selectRole('admin')">
-                    <i class="fas fa-user-shield"></i>
-                    <div style="font-weight: 600;">Admin</div>
-                    <div style="font-size: 0.875rem; color: var(--secondary);">Full Access</div>
+            <div id="loginForm">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label>Email</label>
+                    <input type="email" class="form-control" id="loginEmail" placeholder="admin@shop.com">
                 </div>
-                <div class="role-card" onclick="selectRole('worker')">
-                    <i class="fas fa-user"></i>
-                    <div style="font-weight: 600;">Worker</div>
-                    <div style="font-size: 0.875rem; color: var(--secondary);">Sales Only</div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label>Password</label>
+                    <input type="password" class="form-control" id="loginPassword" placeholder="••••••••">
+                </div>
+
+                <div class="role-selector" style="margin-bottom: 1.5rem;">
+                    <div class="role-card active" onclick="selectRole('admin')">
+                        <i class="fas fa-user-shield"></i>
+                        <div style="font-weight: 600;">Admin</div>
+                        <div style="font-size: 0.875rem; color: var(--secondary);">Full Access</div>
+                    </div>
+                    <div class="role-card" onclick="selectRole('worker')">
+                        <i class="fas fa-user"></i>
+                        <div style="font-weight: 600;">Worker</div>
+                        <div style="font-size: 0.875rem; color: var(--secondary);">Sales Only</div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="login()">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </button>
+
+                <div style="text-align: center; margin-top: 1rem; font-size: 0.875rem; color: var(--secondary);">
+                    <p>First time? Use any email/password to create admin</p>
                 </div>
             </div>
 
-            <div class="form-group" style="margin-bottom: 1.5rem;">
-                <label>Select User</label>
-                <select class="form-control" id="userSelect">
-                    <option value="admin">Administrator</option>
-                    <option value="worker1">John - Sales Rep</option>
-                    <option value="worker2">Sarah - Sales Rep</option>
-                    <option value="worker3">Mike - Sales Rep</option>
-                </select>
+            <div id="registerForm" class="hidden">
+                <h3 style="margin-bottom: 1rem;">Create Admin Account</h3>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>Email</label>
+                    <input type="email" class="form-control" id="regEmail" placeholder="admin@yourshop.com">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>Password (min 6 chars)</label>
+                    <input type="password" class="form-control" id="regPassword" placeholder="••••••••">
+                </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label>Shop Name</label>
+                    <input type="text" class="form-control" id="regShopName" placeholder="Your Shop Name">
+                </div>
+                <button class="btn btn-success" style="width: 100%; justify-content: center;" onclick="registerAdmin()">
+                    <i class="fas fa-user-plus"></i> Create & Initialize
+                </button>
             </div>
-
-            <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="login()">
-                <i class="fas fa-sign-in-alt"></i> Access System
-            </button>
         </div>
     </div>
 
@@ -1052,13 +823,13 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <i class="fas fa-shoe-prints fa-2x" style="margin-bottom: 1rem; opacity: 0.9;"></i>
-                <h1>ShoeShop POS</h1>
-                <p>New Arrivals March 2026</p>
+                <h1 id="shopNameDisplay">ShoeShop POS</h1>
+                <p style="font-size: 0.75rem; opacity: 0.6;">🟢 Live Sync</p>
             </div>
 
             <nav class="nav-menu">
                 <div class="nav-item active" onclick="showSection('dashboard')">
-                    <i class="fas fa-chart-dashboard"></i>
+                    <i class="fas fa-chart-line"></i>
                     <span>Dashboard</span>
                 </div>
                 <div class="nav-item" onclick="showSection('pos')">
@@ -1078,8 +849,12 @@
                     <span>Sales History</span>
                 </div>
                 <div class="nav-item admin-only hidden" onclick="showSection('analytics')">
-                    <i class="fas fa-chart-line"></i>
+                    <i class="fas fa-chart-pie"></i>
                     <span>Analytics</span>
+                </div>
+                <div class="nav-item admin-only hidden" onclick="showSection('team')">
+                    <i class="fas fa-users"></i>
+                    <span>Team</span>
                 </div>
                 <div class="nav-item" onclick="logout()">
                     <i class="fas fa-sign-out-alt"></i>
@@ -1087,8 +862,8 @@
                 </div>
             </nav>
 
-            <div style="padding: 2rem; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
-                <div style="font-size: 0.875rem; opacity: 0.7; margin-bottom: 0.5rem;">Current User</div>
+            <div style="padding: 2rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <div style="font-size: 0.875rem; opacity: 0.7; margin-bottom: 0.5rem;">Logged in as</div>
                 <div id="currentUserDisplay" style="font-weight: 600;">Admin</div>
                 <div id="currentRoleDisplay" class="badge badge-admin" style="margin-top: 0.5rem; display: inline-block;">Administrator</div>
             </div>
@@ -1096,7 +871,7 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Dashboard Section -->
+            <!-- Dashboard -->
             <section id="dashboard" class="section">
                 <div class="header">
                     <h2>Dashboard Overview</h2>
@@ -1109,15 +884,13 @@
                     <div class="stat-card">
                         <div class="stat-header">
                             <div>
-                                <div class="stat-value" id="totalStock">243</div>
-                                <div class="stat-label">Total Items in Stock</div>
+                                <div class="stat-value" id="totalStock">0</div>
+                                <div class="stat-label">Total Items</div>
                             </div>
-                            <div class="stat-icon blue">
-                                <i class="fas fa-box"></i>
-                            </div>
+                            <div class="stat-icon blue"><i class="fas fa-box"></i></div>
                         </div>
                         <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--secondary);">
-                            <span class="text-success"><i class="fas fa-arrow-up"></i> 2 products</span> active
+                            <span class="text-success"><i class="fas fa-sync"></i> Real-time</span>
                         </div>
                     </div>
 
@@ -1127,12 +900,10 @@
                                 <div class="stat-value" id="todaySales">0</div>
                                 <div class="stat-label">Today's Sales</div>
                             </div>
-                            <div class="stat-icon green">
-                                <i class="fas fa-dollar-sign"></i>
-                            </div>
+                            <div class="stat-icon green"><i class="fas fa-dollar-sign"></i></div>
                         </div>
                         <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--secondary);">
-                            <span id="todayRevenue">$0.00</span> revenue today
+                            <span id="todayRevenue">$0.00</span> today
                         </div>
                     </div>
 
@@ -1140,14 +911,12 @@
                         <div class="stat-header">
                             <div>
                                 <div class="stat-value" id="lowStockCount">0</div>
-                                <div class="stat-label">Low Stock Alerts</div>
+                                <div class="stat-label">Low Stock</div>
                             </div>
-                            <div class="stat-icon orange">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            </div>
+                            <div class="stat-icon orange"><i class="fas fa-exclamation-triangle"></i></div>
                         </div>
                         <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--secondary);">
-                            Items needing restock
+                            Need attention
                         </div>
                     </div>
 
@@ -1157,50 +926,52 @@
                                 <div class="stat-value" id="totalRevenue">$0.00</div>
                                 <div class="stat-label">Total Revenue</div>
                             </div>
-                            <div class="stat-icon red">
-                                <i class="fas fa-chart-line"></i>
-                            </div>
+                            <div class="stat-icon red"><i class="fas fa-chart-line"></i></div>
                         </div>
                         <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--secondary);">
-                            Since March 8, 2026
+                            All time
                         </div>
                     </div>
                 </div>
 
-                <!-- Quick Actions for Admin -->
                 <div class="quick-actions admin-only hidden" id="adminQuickActions">
                     <div class="action-card" onclick="showSection('stock-management')">
                         <i class="fas fa-plus-circle"></i>
                         <h3>Add Stock</h3>
-                        <p>Input new arrivals or restock existing items</p>
+                        <p>New arrivals or restock</p>
                     </div>
                     <div class="action-card" onclick="openAdjustmentModal()">
                         <i class="fas fa-edit"></i>
-                        <h3>Adjust Stock</h3>
-                        <p>Correct inventory counts or mark damages</p>
+                        <h3>Quick Adjust</h3>
+                        <p>Fix inventory counts</p>
                     </div>
-                    <div class="action-card" onclick="showSection('sales')">
-                        <i class="fas fa-file-export"></i>
-                        <h3>Export Data</h3>
-                        <p>Download sales and inventory reports</p>
+                    <div class="action-card" onclick="showSection('pos')">
+                        <i class="fas fa-shopping-cart"></i>
+                        <h3>Make Sale</h3>
+                        <p>Process order</p>
+                    </div>
+                    <div class="action-card" onclick="showSection('team')">
+                        <i class="fas fa-user-plus"></i>
+                        <h3>Add Worker</h3>
+                        <p>Create account</p>
                     </div>
                 </div>
 
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">Recent Transactions</div>
+                        <div class="card-title">Recent Activity (Live)</div>
                         <button class="btn btn-secondary" onclick="showSection('sales')">View All</button>
                     </div>
                     <div id="recentTransactions" style="max-height: 400px; overflow-y: auto;">
                         <div style="padding: 3rem; text-align: center; color: var(--secondary);">
-                            <i class="fas fa-receipt fa-3x" style="margin-bottom: 1rem; opacity: 0.3;"></i>
-                            <p>No transactions yet. Start selling!</p>
+                            <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                            <p>Loading...</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- POS Section -->
+            <!-- POS -->
             <section id="pos" class="section hidden">
                 <div class="header">
                     <h2><i class="fas fa-cash-register"></i> Point of Sale</h2>
@@ -1208,16 +979,18 @@
                         <i class="fas fa-plus"></i> New Sale
                     </button>
                 </div>
-
                 <div class="products-grid" id="productGrid">
-                    <!-- Products will be populated here -->
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+                        <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                        <p>Loading products...</p>
+                    </div>
                 </div>
             </section>
 
-            <!-- Inventory Section -->
+            <!-- Inventory -->
             <section id="inventory" class="section hidden">
                 <div class="header">
-                    <h2><i class="fas fa-boxes"></i> Inventory Management</h2>
+                    <h2><i class="fas fa-boxes"></i> Inventory</h2>
                     <div class="flex gap-2">
                         <button class="btn btn-secondary" onclick="exportInventory()">
                             <i class="fas fa-download"></i> Export
@@ -1227,7 +1000,6 @@
                         </button>
                     </div>
                 </div>
-
                 <div class="card">
                     <div class="table-container">
                         <table id="inventoryTable">
@@ -1236,114 +1008,102 @@
                                     <th>Product</th>
                                     <th>Code</th>
                                     <th>Color</th>
-                                    <th>Sizes (36-43)</th>
-                                    <th>Total Stock</th>
+                                    <th>Sizes</th>
+                                    <th>Total</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="inventoryBody">
-                                <!-- Inventory rows populated by JS -->
+                                <tr><td colspan="7" style="text-align: center; padding: 3rem;">
+                                    <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                                    Loading...
+                                </td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
-            <!-- Stock Management Section (Admin Only) -->
+            <!-- Stock Management -->
             <section id="stock-management" class="section hidden">
                 <div class="header">
                     <h2><i class="fas fa-warehouse"></i> Stock Input & Management</h2>
-                    <div class="user-info">
-                        <button class="btn btn-secondary" onclick="showSection('inventory')">
-                            <i class="fas fa-arrow-left"></i> Back to Inventory
-                        </button>
-                    </div>
                 </div>
 
                 <div class="tabs">
                     <div class="tab active" onclick="switchStockTab('add-stock')">
-                        <i class="fas fa-plus-circle"></i> Add New Stock
+                        <i class="fas fa-plus-circle"></i> Add Stock
                     </div>
                     <div class="tab" onclick="switchStockTab('adjust-stock')">
-                        <i class="fas fa-edit"></i> Adjust/Restock
+                        <i class="fas fa-edit"></i> Adjust
                     </div>
                     <div class="tab" onclick="switchStockTab('stock-history')">
-                        <i class="fas fa-history"></i> Stock History
+                        <i class="fas fa-history"></i> History
                     </div>
                     <div class="tab" onclick="switchStockTab('bulk-upload')">
                         <i class="fas fa-file-csv"></i> Bulk Upload
                     </div>
                 </div>
 
-                <!-- Add New Stock Tab -->
+                <!-- Add Stock -->
                 <div id="add-stock" class="stock-tab-content">
                     <div class="card">
                         <div class="card-header">
-                            <div class="card-title">Record New Stock Arrival</div>
+                            <div class="card-title">New Stock Arrival</div>
                         </div>
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Product Code *</label>
+                                <label>Product *</label>
                                 <select class="form-control" id="stockProductCode" onchange="loadProductForStock()">
-                                    <option value="">Select product...</option>
+                                    <option value="">Select...</option>
                                     <option value="D1062">D1062 - Breathable Loafer</option>
                                     <option value="G1164">G1164 - Cross-Strap Sandals</option>
                                 </select>
                             </div>
-
                             <div class="form-group">
                                 <label>Color *</label>
                                 <select class="form-control" id="stockColor" onchange="updateStockInputDisplay()">
-                                    <option value="">Select color...</option>
-                                    <option value="Black">Black</option>
-                                    <option value="Grey">Grey</option>
-                                    <option value="Blue">Blue</option>
-                                    <option value="Beige">Beige</option>
-                                    <option value="Brown">Brown</option>
+                                    <option value="">Select...</option>
                                 </select>
                             </div>
-
                             <div class="form-group">
-                                <label>Supplier/Source</label>
-                                <input type="text" class="form-control" id="stockSupplier" placeholder="e.g., Main Supplier, Factory Direct">
+                                <label>Supplier</label>
+                                <input type="text" class="form-control" id="stockSupplier" placeholder="e.g., Main Supplier">
                             </div>
-
                             <div class="form-group">
-                                <label>Invoice/Reference Number</label>
+                                <label>Invoice #</label>
                                 <input type="text" class="form-control" id="stockInvoice" placeholder="e.g., INV-2026-0120">
                             </div>
-
                             <div class="form-group">
-                                <label>Date Received *</label>
-                                <input type="date" class="form-control" id="stockDate" value="2026-04-09">
+                                <label>Date *</label>
+                                <input type="date" class="form-control" id="stockDate">
                             </div>
-
                             <div class="form-group">
-                                <label>Unit Cost (USD)</label>
+                                <label>Unit Cost ($)</label>
                                 <input type="number" step="0.01" class="form-control" id="stockUnitCost" placeholder="0.00">
                             </div>
                         </div>
 
                         <div style="padding: 0 1.5rem;">
-                            <label style="font-weight: 600; margin-bottom: 1rem; display: block;">Enter Quantity by Size *</label>
+                            <label style="font-weight: 600; margin-bottom: 1rem; display: block;">Quantity by Size</label>
                             <div class="stock-input-grid" id="stockSizeInputs">
-                                <!-- Size inputs generated by JS -->
+                                <p style="color: var(--secondary); text-align: center; grid-column: 1 / -1;">
+                                    Select product and color first
+                                </p>
                             </div>
                         </div>
 
                         <div style="padding: 1.5rem; background: #f8fafc; border-top: 1px solid var(--border); margin-top: 1.5rem;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <div style="font-size: 0.875rem; color: var(--secondary);">Total Units Being Added</div>
+                                    <div style="font-size: 0.875rem; color: var(--secondary);">Total Units</div>
                                     <div style="font-size: 2rem; font-weight: 700;" id="totalStockBeingAdded">0</div>
                                 </div>
                                 <div style="display: flex; gap: 1rem;">
-                                    <button class="btn btn-secondary" onclick="resetStockForm()">
-                                        <i class="fas fa-undo"></i> Reset
-                                    </button>
+                                    <button class="btn btn-secondary" onclick="resetStockForm()">Reset</button>
                                     <button class="btn btn-success" onclick="processStockArrival()">
-                                        <i class="fas fa-check"></i> Record Stock Arrival
+                                        <i class="fas fa-check"></i> Save to Cloud
                                     </button>
                                 </div>
                             </div>
@@ -1351,77 +1111,70 @@
                     </div>
                 </div>
 
-                <!-- Adjust Stock Tab -->
+                <!-- Adjust Stock -->
                 <div id="adjust-stock" class="stock-tab-content hidden">
                     <div class="card">
                         <div class="card-header">
                             <div class="card-title">Stock Adjustment</div>
                         </div>
-                        
                         <div style="padding: 1.5rem;">
-                            <label style="font-weight: 600; margin-bottom: 1rem; display: block;">Adjustment Type</label>
                             <div class="adjustment-type-selector">
                                 <div class="adjustment-type-card active" onclick="selectAdjustmentType('restock')">
-                                    <i class="fas fa-plus" style="color: var(--success);"></i>
-                                    <div style="font-weight: 600; margin-top: 0.5rem;">Restock</div>
-                                    <div style="font-size: 0.875rem; color: var(--secondary);">Add to existing</div>
+                                    <i class="fas fa-plus-circle" style="color: var(--success);"></i>
+                                    <div style="font-weight: 600;">Restock</div>
+                                    <div style="font-size: 0.875rem; color: var(--secondary);">Add inventory</div>
                                 </div>
                                 <div class="adjustment-type-card" onclick="selectAdjustmentType('correction')">
                                     <i class="fas fa-balance-scale" style="color: var(--warning);"></i>
-                                    <div style="font-weight: 600; margin-top: 0.5rem;">Correction</div>
-                                    <div style="font-size: 0.875rem; color: var(--secondary);">Fix count errors</div>
+                                    <div style="font-weight: 600;">Correction</div>
+                                    <div style="font-size: 0.875rem; color: var(--secondary);">Fix errors</div>
                                 </div>
                                 <div class="adjustment-type-card" onclick="selectAdjustmentType('damage')">
                                     <i class="fas fa-trash-alt" style="color: var(--danger);"></i>
-                                    <div style="font-weight: 600; margin-top: 0.5rem;">Damage/Loss</div>
+                                    <div style="font-weight: 600;">Damage/Loss</div>
                                     <div style="font-size: 0.875rem; color: var(--secondary);">Remove stock</div>
                                 </div>
                             </div>
 
-                            <div class="form-grid" style="padding: 0; margin-top: 1.5rem;">
+                            <div class="form-grid" style="padding: 0;">
                                 <div class="form-group">
                                     <label>Product *</label>
                                     <select class="form-control" id="adjustProduct" onchange="loadAdjustProduct()">
-                                        <option value="">Select product...</option>
+                                        <option value="">Select...</option>
                                     </select>
                                 </div>
-
                                 <div class="form-group">
                                     <label>Color *</label>
                                     <select class="form-control" id="adjustColor" onchange="loadAdjustSizes()">
-                                        <option value="">Select color...</option>
+                                        <option value="">Select...</option>
                                     </select>
                                 </div>
-
-                                <div class="form-group">
-                                    <label>Reason/Notes *</label>
-                                    <input type="text" class="form-control" id="adjustReason" placeholder="e.g., Damaged in transit, Inventory count correction">
-                                </div>
-
-                                <div class="form-group">
-                                    <label>Adjusted By</label>
-                                    <input type="text" class="form-control" id="adjustBy" readonly>
+                                <div class="form-group" style="grid-column: 1 / -1;">
+                                    <label>Reason *</label>
+                                    <input type="text" class="form-control" id="adjustReason" placeholder="Why adjusting?">
                                 </div>
                             </div>
 
                             <div style="margin-top: 1.5rem;">
-                                <label style="font-weight: 600; margin-bottom: 1rem; display: block;">Current vs Adjusted Quantities</label>
+                                <label style="font-weight: 600; margin-bottom: 1rem; display: block;">New Quantities</label>
                                 <div id="adjustSizeGrid" class="stock-input-grid">
-                                    <!-- Adjustment inputs generated by JS -->
+                                    <p style="color: var(--secondary); text-align: center; grid-column: 1 / -1;">
+                                        Select product and color
+                                    </p>
                                 </div>
                             </div>
 
-                            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem;">
                                 <button class="btn btn-secondary" onclick="resetAdjustForm()">Reset</button>
                                 <button class="btn btn-primary" onclick="processAdjustment()">
-                                    <i class="fas fa-save"></i> Save Adjustment
+                                    <i class="fas fa-save"></i> Save Changes
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Stock History Tab -->
+                <!-- Stock History -->
                 <div id="stock-history" class="stock-tab-content hidden">
                     <div class="card">
                         <div class="card-header">
@@ -1434,7 +1187,7 @@
                                     <option value="restock">Restock</option>
                                     <option value="sale">Sale</option>
                                     <option value="adjustment">Adjustment</option>
-                                    <option value="damage">Damage/Loss</option>
+                                    <option value="damage">Damage</option>
                                 </select>
                             </div>
                         </div>
@@ -1442,75 +1195,44 @@
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Date/Time</th>
+                                        <th>Time</th>
                                         <th>Type</th>
                                         <th>Product</th>
-                                        <th>Color</th>
-                                        <th>Size</th>
-                                        <th>Qty Change</th>
-                                        <th>Reason/Source</th>
-                                        <th>User</th>
+                                        <th>Details</th>
+                                        <th>Change</th>
+                                        <th>By</th>
                                     </tr>
                                 </thead>
                                 <tbody id="stockHistoryBody">
-                                    <!-- History populated by JS -->
+                                    <tr><td colspan="6" style="text-align: center; padding: 3rem;">
+                                        <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                                        Loading...
+                                    </td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-
-                    <div class="card" style="margin-top: 2rem;">
-                        <div class="card-header">
-                            <div class="card-title">Recent Activity Timeline</div>
-                        </div>
-                        <div style="padding: 1.5rem;">
-                            <div class="timeline" id="stockTimeline">
-                                <!-- Timeline populated by JS -->
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
-                <!-- Bulk Upload Tab -->
+                <!-- Bulk Upload -->
                 <div id="bulk-upload" class="stock-tab-content hidden">
                     <div class="card">
                         <div class="card-header">
-                            <div class="card-title">Bulk Stock Upload</div>
+                            <div class="card-title">Bulk CSV Upload</div>
                         </div>
                         <div style="padding: 2rem;">
-                            <div class="upload-area" onclick="document.getElementById('csvFile').click()">
-                                <i class="fas fa-cloud-upload-alt"></i>
-                                <h3 style="margin-bottom: 0.5rem;">Click to Upload CSV</h3>
-                                <p style="color: var(--secondary); margin-bottom: 1rem;">or drag and drop your file here</p>
+                            <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 3rem; text-align: center;">
+                                <i class="fas fa-cloud-upload-alt fa-3x" style="color: var(--secondary); margin-bottom: 1rem;"></i>
+                                <h3 style="margin-bottom: 0.5rem;">Upload CSV</h3>
+                                <p style="color: var(--secondary); margin-bottom: 1rem;">Select file or drag and drop</p>
                                 <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
-                                <div style="font-size: 0.875rem; color: var(--secondary); background: #f8fafc; padding: 1rem; border-radius: 8px; text-align: left; max-width: 500px; margin: 0 auto;">
-                                    <strong>Required CSV Format:</strong><br>
-                                    product_code,color,size_36,size_37,size_38,size_39,size_40,size_41,size_42,size_43,supplier,invoice,date<br>
-                                    D1062,Black,5,5,10,10,10,10,5,5,Supplier A,INV-001,2026-04-09
-                                </div>
-                            </div>
-
-                            <div id="csvPreview" style="margin-top: 1.5rem; display: none;">
-                                <h4 style="margin-bottom: 1rem;">Preview</h4>
-                                <div class="table-container">
-                                    <table id="csvPreviewTable">
-                                        <thead>
-                                            <tr>
-                                                <th>Product</th>
-                                                <th>Color</th>
-                                                <th>Total Qty</th>
-                                                <th>Supplier</th>
-                                                <th>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="csvPreviewBody"></tbody>
-                                    </table>
-                                </div>
-                                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
-                                    <button class="btn btn-secondary" onclick="cancelCSVUpload()">Cancel</button>
-                                    <button class="btn btn-success" onclick="processCSVUpload()">
-                                        <i class="fas fa-check"></i> Confirm Upload
-                                    </button>
+                                <button class="btn btn-primary" onclick="document.getElementById('csvFile').click()">
+                                    <i class="fas fa-folder-open"></i> Select CSV
+                                </button>
+                                <div style="margin-top: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 8px; text-align: left; font-size: 0.875rem;">
+                                    <strong>CSV Format:</strong><br>
+                                    product_code,color,size_36,size_37,size_38,size_39,size_40,size_41,size_42,size_43,supplier,invoice<br>
+                                    D1062,Black,5,5,10,10,10,10,5,5,Supplier A,INV-001
                                 </div>
                             </div>
                         </div>
@@ -1518,7 +1240,7 @@
                 </div>
             </section>
 
-            <!-- Sales History Section -->
+            <!-- Sales History -->
             <section id="sales" class="section hidden">
                 <div class="header">
                     <h2><i class="fas fa-receipt"></i> Sales History</h2>
@@ -1529,65 +1251,78 @@
                         </button>
                     </div>
                 </div>
-
                 <div class="card">
                     <div class="table-container">
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Date/Time</th>
+                                    <th>Time</th>
                                     <th>Product</th>
-                                    <th>Size</th>
-                                    <th>Color</th>
+                                    <th>Size/Color</th>
+                                    <th>Customer</th>
                                     <th>Sold By</th>
-                                    <th>To (Customer)</th>
                                     <th>Payment</th>
                                     <th>Amount</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="salesBody">
-                                <!-- Sales populated by JS -->
+                                <tr><td colspan="8" style="text-align: center; padding: 3rem;">
+                                    <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                                    Loading...
+                                </td></tr>
                             </tbody>
                         </table>
                     </div>
-                    <div id="salesSummary" style="padding: 1.5rem; background: #f8fafc; border-top: 1px solid var(--border);">
-                        <!-- Summary stats -->
-                    </div>
+                    <div id="salesSummary" style="padding: 1.5rem; background: #f8fafc; border-top: 1px solid var(--border);"></div>
                 </div>
             </section>
 
-            <!-- Analytics Section (Admin Only) -->
+            <!-- Analytics -->
             <section id="analytics" class="section hidden">
                 <div class="header">
-                    <h2><i class="fas fa-chart-line"></i> Sales Analytics</h2>
+                    <h2><i class="fas fa-chart-pie"></i> Analytics</h2>
                 </div>
-
                 <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="topProduct">-</div>
-                        <div class="stat-label">Best Selling Product</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="topSize">-</div>
-                        <div class="stat-label">Most Popular Size</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="topColor">-</div>
-                        <div class="stat-label">Most Popular Color</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="topWorker">-</div>
-                        <div class="stat-label">Top Performer</div>
-                    </div>
+                    <div class="stat-card"><div class="stat-value" id="topProduct">-</div><div class="stat-label">Best Seller</div></div>
+                    <div class="stat-card"><div class="stat-value" id="topSize">-</div><div class="stat-label">Popular Size</div></div>
+                    <div class="stat-card"><div class="stat-value" id="topColor">-</div><div class="stat-label">Popular Color</div></div>
+                    <div class="stat-card"><div class="stat-value" id="topWorker">-</div><div class="stat-label">Top Performer</div></div>
                 </div>
-
                 <div class="card">
-                    <div class="card-header">
-                        <div class="card-title">Stock Movement by Size</div>
-                    </div>
-                    <div style="padding: 1.5rem;">
-                        <div id="sizeAnalytics"></div>
+                    <div class="card-header"><div class="card-title">Sales by Size</div></div>
+                    <div style="padding: 1.5rem;"><div id="sizeAnalytics"></div></div>
+                </div>
+            </section>
+
+            <!-- Team -->
+            <section id="team" class="section hidden">
+                <div class="header">
+                    <h2><i class="fas fa-users"></i> Team</h2>
+                    <button class="btn btn-primary" onclick="openAddWorkerModal()">
+                        <i class="fas fa-user-plus"></i> Add Worker
+                    </button>
+                </div>
+                <div class="card">
+                    <div class="card-header"><div class="card-title">Staff Accounts</div></div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teamBody">
+                                <tr><td colspan="5" style="text-align: center; padding: 3rem;">
+                                    <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                                    Loading...
+                                </td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </section>
@@ -1598,66 +1333,49 @@
     <div id="saleModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Record New Sale</h3>
+                <h3>New Sale</h3>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-grid" style="padding: 0; gap: 1rem;">
                     <div class="form-group" style="grid-column: 1 / -1;">
-                        <label>Select Product *</label>
+                        <label>Product *</label>
                         <select class="form-control" id="saleProduct" onchange="updateProductOptions()">
-                            <option value="">Choose a product...</option>
+                            <option value="">Select...</option>
                         </select>
                     </div>
-
                     <div class="form-group">
                         <label>Color *</label>
                         <div class="color-options" id="colorOptions"></div>
                         <input type="hidden" id="selectedColor">
                     </div>
-
                     <div class="form-group">
-                        <label>Size (36-43) *</label>
+                        <label>Size *</label>
                         <div class="size-grid" id="sizeOptions"></div>
                         <input type="hidden" id="selectedSize">
                     </div>
-
                     <div class="form-group">
-                        <label>Customer Name *</label>
-                        <input type="text" class="form-control" id="customerName" placeholder="Enter customer name">
+                        <label>Customer *</label>
+                        <input type="text" class="form-control" id="customerName" placeholder="Customer name">
                     </div>
-
                     <div class="form-group">
-                        <label>Payment Method *</label>
+                        <label>Payment *</label>
                         <select class="form-control" id="paymentMethod">
                             <option value="cash">Cash</option>
-                            <option value="card">Credit Card</option>
+                            <option value="card">Card</option>
                             <option value="mobile">Mobile Money</option>
                             <option value="transfer">Bank Transfer</option>
                         </select>
                     </div>
-
-                    <div class="form-group">
-                        <label>Sold By *</label>
-                        <select class="form-control" id="soldBy">
-                            <option value="worker1">John - Sales Rep</option>
-                            <option value="worker2">Sarah - Sales Rep</option>
-                            <option value="worker3">Mike - Sales Rep</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                    </div>
-
                     <div class="form-group">
                         <label>Price</label>
                         <input type="text" class="form-control" id="salePrice" readonly style="font-weight: 600; color: var(--primary);">
                     </div>
-
                     <div class="form-group" style="grid-column: 1 / -1;">
-                        <label>Notes (Optional)</label>
-                        <textarea class="form-control" id="saleNotes" rows="2" placeholder="Any additional details..."></textarea>
+                        <label>Notes</label>
+                        <textarea class="form-control" id="saleNotes" rows="2"></textarea>
                     </div>
                 </div>
-
                 <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                     <button class="btn btn-secondary" onclick="closeModal()" style="flex: 1;">Cancel</button>
                     <button class="btn btn-success" onclick="processSale()" style="flex: 1;">
@@ -1668,174 +1386,299 @@
         </div>
     </div>
 
-    <!-- Adjustment Modal (Quick Access) -->
-    <div id="adjustmentModal" class="modal">
-        <div class="modal-content">
+    <!-- Add Worker Modal -->
+    <div id="addWorkerModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
-                <h3>Quick Stock Adjustment</h3>
-                <button class="close-btn" onclick="closeAdjustmentModal()">&times;</button>
+                <h3>Add Worker</h3>
+                <button class="close-btn" onclick="closeWorkerModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <p style="margin-bottom: 1rem; color: var(--secondary);">Select a product and color to adjust stock levels:</p>
                 <div class="form-group" style="margin-bottom: 1rem;">
-                    <label>Product</label>
-                    <select class="form-control" id="quickAdjustProduct" onchange="populateQuickAdjustColors()">
-                        <option value="">Select...</option>
-                    </select>
+                    <label>Full Name *</label>
+                    <input type="text" class="form-control" id="workerName" placeholder="e.g., Sarah Johnson">
                 </div>
                 <div class="form-group" style="margin-bottom: 1rem;">
-                    <label>Color</label>
-                    <select class="form-control" id="quickAdjustColor">
-                        <option value="">Select...</option>
-                    </select>
+                    <label>Email *</label>
+                    <input type="email" class="form-control" id="workerEmail" placeholder="sarah@shop.com">
                 </div>
-                <button class="btn btn-primary w-full" onclick="goToAdjustment()">
-                    <i class="fas fa-arrow-right"></i> Proceed to Adjustment
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label>Password *</label>
+                    <input type="password" class="form-control" id="workerPassword" placeholder="Min 6 characters">
+                </div>
+                <button class="btn btn-success w-full" onclick="addWorker()" style="width: 100%;">
+                    <i class="fas fa-user-plus"></i> Create Worker Account
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notification -->
+    <!-- Toast -->
     <div id="toast" class="toast">
         <i class="fas fa-check-circle"></i>
-        <span id="toastMessage">Operation successful</span>
+        <span id="toastMessage">Success</span>
     </div>
 
+    <!-- ==================== JAVASCRIPT ==================== -->
     <script>
-        // Data Structure based on your invoices
-        const inventory = {
-            D1062: {
-                code: 'D1062',
-                name: 'Breathable Loafer',
-                type: 'loafer',
-                unitPrice: 5.80,
-                colors: {
-                    'Black': { 36: 1, 37: 3, 38: 7, 39: 8, 40: 8, 41: 7, 42: 6, 43: 5, image: 'https://images.unsplash.com/photo-1614252369475-531eba835f76?w=400&h=300&fit=crop' },
-                    'Grey': { 36: 1, 37: 2, 38: 6, 39: 7, 40: 7, 41: 6, 42: 5, 43: 4, image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&h=300&fit=crop' },
-                    'Blue': { 36: 1, 37: 2, 38: 6, 39: 7, 40: 7, 41: 6, 42: 5, 43: 4, image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=300&fit=crop' }
-                }
-            },
-            G1164: {
-                code: 'G1164',
-                name: 'Cross-Strap Sandals',
-                type: 'sandals',
-                unitPrice: 3.40,
-                colors: {
-                    'Black': { 36: 2, 37: 3, 38: 7, 39: 8, 40: 8, 41: 7, 42: 6, 43: 5, image: 'https://images.unsplash.com/photo-1603487742131-4160ec999306?w=400&h=300&fit=crop' },
-                    'Beige': { 36: 1, 37: 2, 38: 6, 39: 7, 40: 7, 41: 6, 42: 5, 43: 4, image: 'https://images.unsplash.com/photo-1603145733190-59811e523c72?w=400&h=300&fit=crop' },
-                    'Brown': { 36: 1, 37: 2, 38: 6, 39: 7, 40: 7, 41: 6, 42: 5, 43: 4, image: 'https://images.unsplash.com/photo-1621993202323-c430e1b3f1d9?w=400&h=300&fit=crop' }
-                }
-            }
+        // ==========================================
+        // YOUR FIREBASE CONFIGURATION
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBopcOXubnDKhKXwNRB-3ClKdEfmI60ixk",
+            authDomain: "shoeshop-pos.firebaseapp.com",
+            databaseURL: "https://shoeshop-pos-default-rtdb.firebaseio.com",
+            projectId: "shoeshop-pos",
+            storageBucket: "shoeshop-pos.firebasestorage.app",
+            messagingSenderId: "1057559871349",
+            appId: "1:1057559871349:web:8f517d19eb5845a74d9d3c"
         };
 
-        let sales = JSON.parse(localStorage.getItem('shoeShopSales')) || [];
-        let stockMovements = JSON.parse(localStorage.getItem('shoeShopStockMovements')) || [];
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+
+        // Global State
         let currentUser = null;
         let currentRole = null;
+        let currentUserData = null;
+        let inventory = {};
+        let sales = [];
+        let stockMovements = [];
         let currentAdjustmentType = 'restock';
+        let shopName = 'ShoeShop POS';
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
-                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
-            });
-            
-            document.getElementById('salesFilterDate').valueAsDate = new Date();
-            document.getElementById('stockDate').valueAsDate = new Date();
-            document.getElementById('historyFilterDate').valueAsDate = new Date();
-            
-            // Initialize stock movement tracking if empty
-            if (stockMovements.length === 0) {
-                initializeStockHistory();
+        // ==========================================
+        // CONNECTION MONITORING
+        // ==========================================
+        const connectedRef = db.ref('.info/connected');
+        connectedRef.on('value', (snap) => {
+            const status = document.getElementById('connectionStatus');
+            if (snap.val() === true) {
+                status.className = 'connection-status status-online';
+                status.innerHTML = '<i class="fas fa-wifi"></i> Live Sync';
+            } else {
+                status.className = 'connection-status status-offline';
+                status.innerHTML = '<i class="fas fa-exclamation"></i> Offline';
             }
         });
 
-        function initializeStockHistory() {
-            // Record initial stock as "arrival"
-            Object.values(inventory).forEach(product => {
-                Object.entries(product.colors).forEach(([color, data]) => {
-                    [36,37,38,39,40,41,42,43].forEach(size => {
-                        if (data[size] > 0) {
-                            stockMovements.push({
-                                id: Date.now() + Math.random(),
-                                date: '2026-03-08T00:00:00',
-                                type: 'arrival',
-                                productCode: product.code,
-                                productName: product.name,
-                                color: color,
-                                size: size,
-                                quantity: data[size],
-                                previousStock: 0,
-                                newStock: data[size],
-                                reason: 'Initial stock - March 8th Arrival',
-                                user: 'System',
-                                supplier: 'Invoice 2026-0120'
-                            });
-                        }
-                    });
-                });
+        // ==========================================
+        // AUTHENTICATION
+        // ==========================================
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                loadUserData(user.uid);
+            } else {
+                document.getElementById('loadingOverlay').classList.remove('active');
+                checkFirstTimeSetup();
+            }
+        });
+
+        function checkFirstTimeSetup() {
+            db.ref('users').once('value', (snapshot) => {
+                if (!snapshot.exists()) {
+                    document.getElementById('loginForm').classList.add('hidden');
+                    document.getElementById('registerForm').classList.remove('hidden');
+                }
             });
-            saveStockMovements();
         }
 
-        function selectRole(role) {
-            currentRole = role;
-            document.querySelectorAll('.role-card').forEach(card => card.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-            
-            const userSelect = document.getElementById('userSelect');
-            if (role === 'admin') {
-                userSelect.innerHTML = '<option value="admin">Administrator</option>';
-            } else {
-                userSelect.innerHTML = `
-                    <option value="worker1">John - Sales Rep</option>
-                    <option value="worker2">Sarah - Sales Rep</option>
-                    <option value="worker3">Mike - Sales Rep</option>
-                `;
+        function registerAdmin() {
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const shop = document.getElementById('regShopName').value;
+
+            if (!email || !password || password.length < 6 || !shop) {
+                showToast('Please fill all fields (password min 6 chars)', 'error');
+                return;
             }
+
+            document.getElementById('loadingOverlay').classList.add('active');
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    return db.ref('users/' + user.uid).set({
+                        email: email,
+                        role: 'admin',
+                        name: 'Administrator',
+                        shopName: shop,
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    });
+                })
+                .then(() => initializeInventory())
+                .then(() => {
+                    showToast('Admin account created! Logging in...', 'success');
+                })
+                .catch((error) => {
+                    document.getElementById('loadingOverlay').classList.remove('active');
+                    showToast(error.message, 'error');
+                });
         }
 
         function login() {
-            currentUser = document.getElementById('userSelect').value;
-            currentRole = document.querySelector('.role-card.active').innerText.includes('Admin') ? 'admin' : 'worker';
-            
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('mainApp').classList.remove('hidden');
-            
-            // Update UI based on role
-            document.getElementById('currentUserDisplay').textContent = 
-                currentUser === 'admin' ? 'Administrator' : 
-                currentUser === 'worker1' ? 'John' :
-                currentUser === 'worker2' ? 'Sarah' : 'Mike';
-            
-            document.getElementById('currentRoleDisplay').textContent = 
-                currentRole === 'admin' ? 'Administrator' : 'Sales Representative';
-            
-            document.getElementById('currentRoleDisplay').className = 
-                currentRole === 'admin' ? 'badge badge-admin' : 'badge badge-worker';
-            
-            // Show/hide admin elements
-            if (currentRole === 'admin') {
-                document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
-            } else {
-                document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showToast('Please enter email and password', 'error');
+                return;
             }
-            
-            // Set adjustment by field
-            document.getElementById('adjustBy').value = document.getElementById('currentUserDisplay').textContent;
-            
-            updateDashboard();
-            renderProducts();
-            renderInventory();
-            renderSales();
-            initializeAdjustmentSelects();
-            
-            showToast('Welcome back! ' + document.getElementById('currentUserDisplay').textContent, 'success');
+
+            document.getElementById('loadingOverlay').classList.add('active');
+
+            auth.signInWithEmailAndPassword(email, password)
+                .catch((error) => {
+                    document.getElementById('loadingOverlay').classList.remove('active');
+                    showToast(error.message, 'error');
+                });
         }
 
         function logout() {
+            auth.signOut();
             location.reload();
+        }
+
+        function loadUserData(uid) {
+            db.ref('users/' + uid).once('value', (snapshot) => {
+                const userData = snapshot.val();
+                if (!userData) return;
+
+                currentUser = auth.currentUser;
+                currentUserData = userData;
+                currentRole = userData.role;
+                shopName = userData.shopName || 'ShoeShop POS';
+
+                document.getElementById('shopNameDisplay').textContent = shopName;
+                document.getElementById('currentUserDisplay').textContent = userData.name || userData.email;
+                document.getElementById('currentRoleDisplay').textContent = userData.role === 'admin' ? 'Administrator' : 'Sales Rep';
+                document.getElementById('currentRoleDisplay').className = userData.role === 'admin' ? 'badge badge-admin' : 'badge badge-worker';
+
+                if (userData.role === 'admin') {
+                    document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+                }
+
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('loadingOverlay').classList.remove('active');
+
+                setupRealtimeListeners();
+                updateDate();
+            });
+        }
+
+        function selectRole(role) {
+            document.querySelectorAll('.role-card').forEach(card => card.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        // ==========================================
+        // REALTIME DATA LISTENERS
+        // ==========================================
+        function setupRealtimeListeners() {
+            // Inventory
+            db.ref('inventory').on('value', (snapshot) => {
+                inventory = snapshot.val() || {};
+                updateDashboard();
+                renderProducts();
+                renderInventory();
+            });
+
+            // Sales (last 100)
+            db.ref('sales').orderByChild('timestamp').limitToLast(100).on('value', (snapshot) => {
+                sales = [];
+                snapshot.forEach((child) => {
+                    sales.push({ id: child.key, ...child.val() });
+                });
+                sales.reverse();
+                updateDashboard();
+                renderSales();
+                renderRecentTransactions();
+            });
+
+            // Stock movements (last 50)
+            db.ref('stockMovements').orderByChild('timestamp').limitToLast(50).on('value', (snapshot) => {
+                stockMovements = [];
+                snapshot.forEach((child) => {
+                    stockMovements.push({ id: child.key, ...child.val() });
+                });
+                stockMovements.reverse();
+                if (!document.getElementById('stock-history').classList.contains('hidden')) {
+                    renderStockHistory();
+                }
+            });
+
+            // Team (admin only)
+            if (currentRole === 'admin') {
+                db.ref('users').on('value', (snapshot) => {
+                    renderTeam(snapshot.val());
+                });
+            }
+        }
+
+        // ==========================================
+        // INITIALIZE INVENTORY
+        // ==========================================
+        function initializeInventory() {
+            const initialInventory = {
+                D1062: {
+                    code: 'D1062',
+                    name: 'Breathable Loafer',
+                    type: 'loafer',
+                    unitPrice: 5.80,
+                    colors: {
+                        'Black': { 
+                            36: 1, 37: 3, 38: 7, 39: 8, 40: 8, 41: 7, 42: 6, 43: 5,
+                            image: 'https://images.unsplash.com/photo-1614252369475-531eba835f76?w=400&h=300&fit=crop'
+                        },
+                        'Grey': { 
+                            36: 1, 37: 2, 38: 6, 39: 7, 40: 7, 41: 6, 42: 5, 43: 4,
+                            image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&h=300&fit=crop'
+                        },
+                        'Blue': { 
+                            36: 1, 37: 2, 38: 6, 39: 7, 40: 7, 41: 6, 42: 5, 43: 4,
+                            image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=300&fit=crop'
+                        }
+                    }
+                },
+                G1164: {
+                    code: 'G1164',
+                    name: 'Cross-Strap Sandals',
+                    type: 'sandals',
+                    unitPrice: 3.40,
+                    colors: {
+                        'Black': { 
+                            36: 2, 37: 3, 38: 7, 39: 8, 40: 8, 41: 7, 42: 6, 43: 5,
+                            image: 'https://images.unsplash.com/photo-1603487742131-4160ec999306?w=400&h=300&fit=crop'
+                        },
+                        'Beige': { 
+                            36: 1, 37: 2, 38: 6, 39: 7, 40: 7, 41: 6, 42: 5, 43: 4,
+                            image: 'https://images.unsplash.com/photo-1603145733190-59811e523c72?w=400&h=300&fit=crop'
+                        },
+                        'Brown': { 
+                            36: 1, 37: 2, 38: 6, 39: 7, 40: 7, 41: 6, 42: 5, 43: 4,
+                            image: 'https://images.unsplash.com/photo-1621993202323-c430e1b3f1d9?w=400&h=300&fit=crop'
+                        }
+                    }
+                }
+            };
+
+            return db.ref('inventory').set(initialInventory);
+        }
+
+        // ==========================================
+        // UI FUNCTIONS
+        // ==========================================
+        function updateDate() {
+            const now = new Date();
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+            document.getElementById('stockDate').valueAsDate = now;
+            document.getElementById('salesFilterDate').valueAsDate = now;
+            document.getElementById('historyFilterDate').valueAsDate = now;
         }
 
         function showSection(sectionId) {
@@ -1843,36 +1686,41 @@
             document.getElementById(sectionId).classList.remove('hidden');
             
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            
-            // Update nav active state
-            const navItems = document.querySelectorAll('.nav-item');
-            navItems.forEach(item => {
-                if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(sectionId)) {
-                    item.classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => {
+                if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(sectionId)) {
+                    n.classList.add('active');
                 }
             });
-            
-            if (sectionId === 'analytics') {
-                updateAnalytics();
-            } else if (sectionId === 'stock-management') {
-                renderStockHistory();
-            }
+
+            if (sectionId === 'analytics') updateAnalytics();
+            if (sectionId === 'stock-management') renderStockHistory();
         }
 
-        // Dashboard Functions
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            toast.className = `toast ${type} show`;
+            toastMessage.textContent = message;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function switchStockTab(tabId) {
+            document.querySelectorAll('.stock-tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.closest('.tab').classList.add('active');
+            
+            if (tabId === 'stock-history') renderStockHistory();
+        }
+
+        // ==========================================
+        // DASHBOARD
+        // ==========================================
         function updateDashboard() {
-            const today = new Date().toDateString();
-            const todaySales = sales.filter(s => new Date(s.date).toDateString() === today);
-            const todayRevenue = todaySales.reduce((sum, s) => sum + s.amount, 0);
-            const totalRevenue = sales.reduce((sum, s) => sum + s.amount, 0);
-            
-            document.getElementById('todaySales').textContent = todaySales.length;
-            document.getElementById('todayRevenue').textContent = '$' + todayRevenue.toFixed(2);
-            document.getElementById('totalRevenue').textContent = '$' + totalRevenue.toFixed(2);
-            
-            // Calculate total stock
             let totalStock = 0;
             let lowStock = 0;
+
             Object.values(inventory).forEach(product => {
                 Object.values(product.colors).forEach(color => {
                     [36,37,38,39,40,41,42,43].forEach(size => {
@@ -1882,45 +1730,67 @@
                     });
                 });
             });
-            
+
             document.getElementById('totalStock').textContent = totalStock;
             document.getElementById('lowStockCount').textContent = lowStock;
-            
-            // Recent transactions
-            const recentDiv = document.getElementById('recentTransactions');
-            if (sales.length === 0) {
-                recentDiv.innerHTML = `
-                    <div style="padding: 3rem; text-align: center; color: var(--secondary);">
-                        <i class="fas fa-receipt fa-3x" style="margin-bottom: 1rem; opacity: 0.3;"></i>
-                        <p>No transactions yet. Start selling!</p>
-                    </div>
-                `;
-            } else {
-                recentDiv.innerHTML = sales.slice(-5).reverse().map(sale => `
-                    <div class="transaction-item">
-                        <div class="transaction-icon ${sale.payment === 'cash' ? 'green' : 'blue'}">
-                            <i class="fas fa-${sale.payment === 'cash' ? 'money-bill' : 'credit-card'}"></i>
-                        </div>
-                        <div class="transaction-details">
-                            <div class="transaction-title">${sale.productName} - Size ${sale.size} ${sale.color}</div>
-                            <div class="transaction-meta">
-                                Sold by ${sale.soldByName} to ${sale.customer} • ${new Date(sale.date).toLocaleString()}
-                            </div>
-                        </div>
-                        <div class="transaction-amount">$${sale.amount.toFixed(2)}</div>
-                    </div>
-                `).join('');
-            }
+
+            // Today's sales
+            const today = new Date().toDateString();
+            const todaySales = sales.filter(s => new Date(s.date).toDateString() === today);
+            const todayRevenue = todaySales.reduce((sum, s) => sum + (s.amount || 0), 0);
+            const totalRevenue = sales.reduce((sum, s) => sum + (s.amount || 0), 0);
+
+            document.getElementById('todaySales').textContent = todaySales.length;
+            document.getElementById('todayRevenue').textContent = '$' + todayRevenue.toFixed(2);
+            document.getElementById('totalRevenue').textContent = '$' + totalRevenue.toFixed(2);
         }
 
-        // POS Functions
+        function renderRecentTransactions() {
+            const container = document.getElementById('recentTransactions');
+            
+            if (sales.length === 0) {
+                container.innerHTML = `
+                    <div style="padding: 3rem; text-align: center; color: var(--secondary);">
+                        <i class="fas fa-receipt fa-3x" style="margin-bottom: 1rem; opacity: 0.3;"></i>
+                        <p>No sales yet. Start selling!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = sales.slice(0, 5).map(sale => `
+                <div class="transaction-item">
+                    <div class="transaction-icon ${sale.payment === 'cash' ? 'green' : 'blue'}">
+                        <i class="fas fa-${sale.payment === 'cash' ? 'money-bill' : 'credit-card'}"></i>
+                    </div>
+                    <div class="transaction-details">
+                        <div class="transaction-title">${sale.productName} - Size ${sale.size} ${sale.color}</div>
+                        <div class="transaction-meta">
+                            ${sale.soldByName} to ${sale.customer} • ${new Date(sale.date).toLocaleString()}
+                        </div>
+                    </div>
+                    <div class="transaction-amount">$${(sale.amount || 0).toFixed(2)}</div>
+                </div>
+            `).join('');
+        }
+
+        // ==========================================
+        // PRODUCTS & INVENTORY
+        // ==========================================
         function renderProducts() {
             const grid = document.getElementById('productGrid');
+            
+            if (Object.keys(inventory).length === 0) {
+                grid.innerHTML = '<div style="text-align: center; padding: 3rem;">No products found</div>';
+                return;
+            }
+
             grid.innerHTML = '';
             
             Object.values(inventory).forEach(product => {
                 Object.entries(product.colors).forEach(([color, data]) => {
-                    const totalStock = Object.values(data).filter(v => typeof v === 'number').reduce((a, b) => a + b, 0);
+                    const sizes = [36,37,38,39,40,41,42,43];
+                    const totalStock = sizes.reduce((sum, s) => sum + (data[s] || 0), 0);
                     
                     const card = document.createElement('div');
                     card.className = 'product-card';
@@ -1932,15 +1802,15 @@
                             <div class="product-code">${product.code} • ${color}</div>
                             <div class="product-name">${product.name}</div>
                             <div class="product-meta">
-                                <span class="price-tag">$${product.unitPrice.toFixed(2)}</span>
+                                <span class="price-tag">$${(product.unitPrice || 0).toFixed(2)}</span>
                                 <span class="stock-badge ${totalStock > 10 ? 'text-success' : totalStock > 5 ? 'text-warning' : 'text-danger'}" 
                                       style="background: ${totalStock > 10 ? '#d1fae5' : totalStock > 5 ? '#fef3c7' : '#fee2e2'}">
                                     ${totalStock} in stock
                                 </span>
                             </div>
                             <div class="size-grid" style="margin-top: 0.75rem; pointer-events: none;">
-                                ${[36,37,38,39,40,41,42,43].map(size => `
-                                    <div class="size-btn ${data[size] > 0 ? '' : 'disabled'}" 
+                                ${sizes.map(size => `
+                                    <div class="size-btn ${(data[size] || 0) > 0 ? '' : 'disabled'}" 
                                          style="padding: 0.25rem; font-size: 0.75rem;">
                                         ${size}: ${data[size] || 0}
                                     </div>
@@ -1953,157 +1823,14 @@
             });
         }
 
-        function openSaleModal(productCode = '', colorName = '') {
-            const modal = document.getElementById('saleModal');
-            const productSelect = document.getElementById('saleProduct');
-            
-            productSelect.innerHTML = '<option value="">Choose a product...</option>';
-            Object.values(inventory).forEach(product => {
-                Object.keys(product.colors).forEach(color => {
-                    const option = document.createElement('option');
-                    option.value = `${product.code}|${color}`;
-                    option.textContent = `${product.name} - ${color} ($${product.unitPrice})`;
-                    if (productCode === product.code && colorName === color) option.selected = true;
-                    productSelect.appendChild(option);
-                });
-            });
-            
-            document.getElementById('soldBy').value = currentUser;
-            
-            modal.classList.add('active');
-            if (productCode) updateProductOptions();
-        }
-
-        function closeModal() {
-            document.getElementById('saleModal').classList.remove('active');
-            document.getElementById('selectedColor').value = '';
-            document.getElementById('selectedSize').value = '';
-        }
-
-        function updateProductOptions() {
-            const selection = document.getElementById('saleProduct').value;
-            if (!selection) return;
-            
-            const [code, color] = selection.split('|');
-            const product = inventory[code];
-            const colorData = product.colors[color];
-            
-            document.getElementById('selectedColor').value = color;
-            document.getElementById('salePrice').value = '$' + product.unitPrice.toFixed(2);
-            
-            const colorDiv = document.getElementById('colorOptions');
-            colorDiv.innerHTML = Object.keys(product.colors).map(c => `
-                <div class="color-btn ${c === color ? 'active' : ''}" 
-                     style="background: ${c.toLowerCase()}; ${c === 'Beige' ? 'background: #e8d5b5;' : ''}"
-                     onclick="selectColor('${c}', '${code}')">
-                </div>
-            `).join('');
-            
-            const sizeDiv = document.getElementById('sizeOptions');
-            sizeDiv.innerHTML = [36,37,38,39,40,41,42,43].map(size => `
-                <button class="size-btn ${colorData[size] === 0 ? 'disabled' : ''}" 
-                        ${colorData[size] === 0 ? 'disabled' : ''}
-                        onclick="selectSize(${size}, this)">
-                    ${size}<br><small style="font-size: 0.65rem; opacity: 0.7;">${colorData[size]} left</small>
-                </button>
-            `).join('');
-        }
-
-        function selectColor(color, code) {
-            document.getElementById('saleProduct').value = `${code}|${color}`;
-            updateProductOptions();
-        }
-
-        function selectSize(size, btn) {
-            document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById('selectedSize').value = size;
-        }
-
-        function processSale() {
-            const selection = document.getElementById('saleProduct').value;
-            const size = document.getElementById('selectedSize').value;
-            const customer = document.getElementById('customerName').value.trim();
-            const payment = document.getElementById('paymentMethod').value;
-            const seller = document.getElementById('soldBy').value;
-            const notes = document.getElementById('saleNotes').value.trim();
-            
-            if (!selection || !size || !customer) {
-                showToast('Please fill in all required fields', 'error');
-                return;
-            }
-            
-            const [code, color] = selection.split('|');
-            const product = inventory[code];
-            
-            if (product.colors[color][size] <= 0) {
-                showToast('Sorry, this item is out of stock in this size', 'error');
-                return;
-            }
-            
-            const previousStock = product.colors[color][size];
-            product.colors[color][size]--;
-            
-            // Record stock movement
-            recordStockMovement({
-                type: 'sale',
-                productCode: code,
-                productName: product.name,
-                color: color,
-                size: parseInt(size),
-                quantity: -1,
-                previousStock: previousStock,
-                newStock: product.colors[color][size],
-                reason: `Sold to ${customer}`,
-                user: seller === 'admin' ? 'Admin' : seller === 'worker1' ? 'John' : seller === 'worker2' ? 'Sarah' : 'Mike',
-                customer: customer
-            });
-            
-            const sale = {
-                id: Date.now(),
-                date: new Date().toISOString(),
-                productCode: code,
-                productName: product.name,
-                color: color,
-                size: parseInt(size),
-                amount: product.unitPrice,
-                customer: customer,
-                payment: payment,
-                soldBy: seller,
-                soldByName: seller === 'admin' ? 'Admin' : seller === 'worker1' ? 'John' : seller === 'worker2' ? 'Sarah' : 'Mike',
-                notes: notes
-            };
-            
-            sales.push(sale);
-            localStorage.setItem('shoeShopSales', JSON.stringify(sales));
-            
-            closeModal();
-            updateDashboard();
-            renderProducts();
-            renderInventory();
-            renderSales();
-            
-            showToast(`Sale completed! ${product.name} Size ${size} sold to ${customer}`, 'success');
-            
-            document.getElementById('customerName').value = '';
-            document.getElementById('saleNotes').value = '';
-        }
-
-        // Stock Movement Functions
-        function recordStockMovement(movement) {
-            movement.id = Date.now() + Math.random();
-            movement.date = new Date().toISOString();
-            stockMovements.push(movement);
-            saveStockMovements();
-        }
-
-        function saveStockMovements() {
-            localStorage.setItem('shoeShopStockMovements', JSON.stringify(stockMovements));
-        }
-
-        // Inventory Functions
         function renderInventory() {
             const tbody = document.getElementById('inventoryBody');
+            
+            if (Object.keys(inventory).length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 3rem;">No inventory data</td></tr>';
+                return;
+            }
+
             tbody.innerHTML = '';
             
             Object.values(inventory).forEach(product => {
@@ -2164,32 +1891,267 @@
             });
         }
 
-        // Stock Management Functions
-        function switchStockTab(tabId) {
-            document.querySelectorAll('.stock-tab-content').forEach(t => t.classList.add('hidden'));
-            document.getElementById(tabId).classList.remove('hidden');
+        // ==========================================
+        // SALES FUNCTIONS
+        // ==========================================
+        function openSaleModal(productCode = '', colorName = '') {
+            const modal = document.getElementById('saleModal');
+            const productSelect = document.getElementById('saleProduct');
             
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.closest('.tab').classList.add('active');
+            productSelect.innerHTML = '<option value="">Select...</option>';
             
-            if (tabId === 'stock-history') {
-                renderStockHistory();
-            }
+            Object.values(inventory).forEach(product => {
+                Object.keys(product.colors).forEach(color => {
+                    const option = document.createElement('option');
+                    option.value = `${product.code}|${color}`;
+                    option.textContent = `${product.name} - ${color} ($${(product.unitPrice || 0).toFixed(2)})`;
+                    if (productCode === product.code && colorName === color) option.selected = true;
+                    productSelect.appendChild(option);
+                });
+            });
+            
+            document.getElementById('soldBy') && (document.getElementById('soldBy').value = currentUser.uid);
+            
+            modal.classList.add('active');
+            if (productCode) updateProductOptions();
         }
 
+        function closeModal() {
+            document.getElementById('saleModal').classList.remove('active');
+            document.getElementById('selectedColor').value = '';
+            document.getElementById('selectedSize').value = '';
+        }
+
+        function updateProductOptions() {
+            const selection = document.getElementById('saleProduct').value;
+            if (!selection) return;
+            
+            const [code, color] = selection.split('|');
+            const product = inventory[code];
+            if (!product) return;
+            
+            const colorData = product.colors[color];
+            
+            document.getElementById('selectedColor').value = color;
+            document.getElementById('salePrice').value = '$' + (product.unitPrice || 0).toFixed(2);
+            
+            const colorDiv = document.getElementById('colorOptions');
+            colorDiv.innerHTML = Object.keys(product.colors).map(c => `
+                <div class="color-btn ${c === color ? 'active' : ''}" 
+                     style="background: ${c.toLowerCase()}; ${c === 'Beige' ? 'background: #e8d5b5;' : ''}"
+                     onclick="selectColor('${c}', '${code}')">
+                </div>
+            `).join('');
+            
+            const sizeDiv = document.getElementById('sizeOptions');
+            sizeDiv.innerHTML = [36,37,38,39,40,41,42,43].map(size => {
+                const stock = colorData[size] || 0;
+                return `
+                    <button class="size-btn ${stock === 0 ? 'disabled' : ''}" 
+                            ${stock === 0 ? 'disabled' : ''}
+                            onclick="selectSize(${size}, this)">
+                        ${size}<br><small style="font-size: 0.65rem; opacity: 0.7;">${stock} left</small>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectColor(color, code) {
+            document.getElementById('saleProduct').value = `${code}|${color}`;
+            updateProductOptions();
+        }
+
+        function selectSize(size, btn) {
+            document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('selectedSize').value = size;
+        }
+
+        function processSale() {
+            const selection = document.getElementById('saleProduct').value;
+            const size = parseInt(document.getElementById('selectedSize').value);
+            const customer = document.getElementById('customerName').value.trim();
+            const payment = document.getElementById('paymentMethod').value;
+            const notes = document.getElementById('saleNotes').value.trim();
+            
+            if (!selection || !size || !customer) {
+                showToast('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            const [code, color] = selection.split('|');
+            const product = inventory[code];
+            
+            if (!product || !product.colors[color] || (product.colors[color][size] || 0) <= 0) {
+                showToast('Sorry, this item is out of stock', 'error');
+                return;
+            }
+            
+            const previousStock = product.colors[color][size];
+            const newStock = previousStock - 1;
+            
+            // Update inventory
+            db.ref(`inventory/${code}/colors/${color}/${size}`).set(newStock)
+                .then(() => {
+                    // Record sale
+                    const saleData = {
+                        productCode: code,
+                        productName: product.name,
+                        color: color,
+                        size: size,
+                        amount: product.unitPrice || 0,
+                        customer: customer,
+                        payment: payment,
+                        soldBy: currentUser.uid,
+                        soldByName: currentUserData.name || currentUserData.email,
+                        notes: notes,
+                        date: new Date().toISOString(),
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    };
+                    
+                    return db.ref('sales').push(saleData);
+                })
+                .then(() => {
+                    // Record stock movement
+                    const movement = {
+                        type: 'sale',
+                        productCode: code,
+                        productName: product.name,
+                        color: color,
+                        size: size,
+                        quantity: -1,
+                        previousStock: previousStock,
+                        newStock: newStock,
+                        reason: `Sold to ${customer}`,
+                        user: currentUserData.name || currentUserData.email,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP,
+                        date: new Date().toISOString()
+                    };
+                    
+                    return db.ref('stockMovements').push(movement);
+                })
+                .then(() => {
+                    closeModal();
+                    showToast(`Sale completed! ${product.name} Size ${size}`, 'success');
+                    document.getElementById('customerName').value = '';
+                    document.getElementById('saleNotes').value = '';
+                })
+                .catch((error) => {
+                    showToast('Error: ' + error.message, 'error');
+                });
+        }
+
+        function renderSales() {
+            const tbody = document.getElementById('salesBody');
+            const filterDate = document.getElementById('salesFilterDate').value;
+            
+            let filteredSales = sales;
+            if (filterDate) {
+                const filter = new Date(filterDate).toDateString();
+                filteredSales = sales.filter(s => new Date(s.date).toDateString() === filter);
+            }
+            
+            if (filteredSales.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 3rem; color: var(--secondary);">No sales found</td></tr>';
+                document.getElementById('salesSummary').innerHTML = '';
+                return;
+            }
+            
+            tbody.innerHTML = filteredSales.map(sale => `
+                <tr>
+                    <td>${new Date(sale.date).toLocaleString()}</td>
+                    <td>
+                        <div style="font-weight: 600;">${sale.productName}</div>
+                        <div style="font-size: 0.875rem; color: var(--secondary);">${sale.productCode}</div>
+                    </td>
+                    <td>Size ${sale.size} ${sale.color}</td>
+                    <td>${sale.customer}</td>
+                    <td><span class="badge badge-worker">${sale.soldByName}</span></td>
+                    <td>${sale.payment}</td>
+                    <td style="font-weight: 700; color: var(--success);">$${(sale.amount || 0).toFixed(2)}</td>
+                    <td>
+                        ${currentRole === 'admin' ? `
+                            <button class="btn btn-danger" onclick="deleteSale('${sale.id}', '${sale.productCode}', '${sale.color}', ${sale.size})" style="padding: 0.5rem;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        ` : '-'}
+                    </td>
+                </tr>
+            `).join('');
+            
+            const totalAmount = filteredSales.reduce((sum, s) => sum + (s.amount || 0), 0);
+            document.getElementById('salesSummary').innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 0.875rem; color: var(--secondary);">Total Sales</div>
+                        <div style="font-size: 1.5rem; font-weight: 700;">${filteredSales.length} transactions</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.875rem; color: var(--secondary);">Total Revenue</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);">$${totalAmount.toFixed(2)}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function filterSales() {
+            renderSales();
+        }
+
+        function deleteSale(saleId, productCode, color, size) {
+            if (!confirm('Delete this sale and restore stock?')) return;
+            
+            // Get current stock
+            const currentStock = inventory[productCode]?.colors[color]?.[size] || 0;
+            const newStock = currentStock + 1;
+            
+            // Update stock
+            db.ref(`inventory/${productCode}/colors/${color}/${size}`).set(newStock)
+                .then(() => {
+                    // Record movement
+                    return db.ref('stockMovements').push({
+                        type: 'adjustment',
+                        productCode: productCode,
+                        productName: inventory[productCode]?.name,
+                        color: color,
+                        size: size,
+                        quantity: 1,
+                        previousStock: currentStock,
+                        newStock: newStock,
+                        reason: `Sale deletion - restored from sale ${saleId}`,
+                        user: currentUserData.name || currentUserData.email,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP,
+                        date: new Date().toISOString()
+                    });
+                })
+                .then(() => {
+                    // Delete sale
+                    return db.ref(`sales/${saleId}`).remove();
+                })
+                .then(() => {
+                    showToast('Sale deleted and stock restored', 'success');
+                })
+                .catch((error) => {
+                    showToast('Error: ' + error.message, 'error');
+                });
+        }
+
+        // ==========================================
+        // STOCK MANAGEMENT
+        // ==========================================
         function loadProductForStock() {
             const code = document.getElementById('stockProductCode').value;
             const colorSelect = document.getElementById('stockColor');
             
             if (!code) {
-                colorSelect.innerHTML = '<option value="">Select color...</option>';
+                colorSelect.innerHTML = '<option value="">Select...</option>';
                 return;
             }
             
             const product = inventory[code];
             const colors = Object.keys(product.colors);
             
-            colorSelect.innerHTML = '<option value="">Select color...</option>' +
+            colorSelect.innerHTML = '<option value="">Select...</option>' +
                 colors.map(c => `<option value="${c}">${c}</option>`).join('');
         }
 
@@ -2199,30 +2161,33 @@
             const container = document.getElementById('stockSizeInputs');
             
             if (!code || !color) {
-                container.innerHTML = '<p style="color: var(--secondary); text-align: center;">Select product and color to enter quantities</p>';
+                container.innerHTML = '<p style="color: var(--secondary); text-align: center; grid-column: 1 / -1;">Select product and color</p>';
                 return;
             }
             
-            container.innerHTML = [36,37,38,39,40,41,42,43].map(size => `
-                <div class="stock-input-card">
-                    <div class="size-stock-input">
-                        <span class="size-label">${size}</span>
-                        <input type="number" min="0" class="stock-number-input" 
-                               id="stockSize_${size}" value="0" 
-                               onchange="updateTotalStockBeingAdded()">
+            container.innerHTML = [36,37,38,39,40,41,42,43,44,45,46,47,48].map(size => {
+                const current = inventory[code]?.colors[color]?.[size] || 0;
+                return `
+                    <div class="stock-input-card">
+                        <div class="size-stock-input">
+                            <span class="size-label">${size}</span>
+                            <input type="number" min="0" class="stock-number-input" 
+                                   id="stockSize_${size}" value="0" 
+                                   onchange="updateTotalStockBeingAdded()">
+                        </div>
+                        <div style="text-align: center; font-size: 0.875rem; color: var(--secondary);">
+                            Current: ${current}
+                        </div>
                     </div>
-                    <div style="text-align: center; font-size: 0.875rem; color: var(--secondary);">
-                        Current: ${inventory[code].colors[color][size] || 0}
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             
             updateTotalStockBeingAdded();
         }
 
         function updateTotalStockBeingAdded() {
             let total = 0;
-            [36,37,38,39,40,41,42,43].forEach(size => {
+            [36,37,38,39,40,41,42,43,44,45,46,47,48].forEach(size => {
                 const input = document.getElementById(`stockSize_${size}`);
                 if (input) total += parseInt(input.value) || 0;
             });
@@ -2235,7 +2200,7 @@
             document.getElementById('stockSupplier').value = '';
             document.getElementById('stockInvoice').value = '';
             document.getElementById('stockUnitCost').value = '';
-            document.getElementById('stockSizeInputs').innerHTML = '<p style="color: var(--secondary); text-align: center;">Select product and color to enter quantities</p>';
+            document.getElementById('stockSizeInputs').innerHTML = '<p style="color: var(--secondary); text-align: center; grid-column: 1 / -1;">Select product and color</p>';
             document.getElementById('totalStockBeingAdded').textContent = '0';
         }
 
@@ -2244,7 +2209,6 @@
             const color = document.getElementById('stockColor').value;
             const supplier = document.getElementById('stockSupplier').value || 'Unknown';
             const invoice = document.getElementById('stockInvoice').value || 'N/A';
-            const date = document.getElementById('stockDate').value;
             const unitCost = document.getElementById('stockUnitCost').value;
             
             if (!code || !color) {
@@ -2253,54 +2217,62 @@
             }
             
             const product = inventory[code];
+            let updates = {};
+            let movements = [];
             let totalAdded = 0;
             
-            [36,37,38,39,40,41,42,43].forEach(size => {
+            [36,37,38,39,40,41,42,43],44,45,46,47,48.forEach(size => {
                 const input = document.getElementById(`stockSize_${size}`);
                 const qty = parseInt(input.value) || 0;
+                
                 if (qty > 0) {
-                    const previousStock = product.colors[color][size] || 0;
-                    product.colors[color][size] = previousStock + qty;
+                    const currentStock = product.colors[color][size] || 0;
+                    const newStock = currentStock + qty;
                     totalAdded += qty;
                     
-                    recordStockMovement({
+                    updates[`inventory/${code}/colors/${color}/${size}`] = newStock;
+                    
+                    movements.push({
                         type: 'arrival',
                         productCode: code,
                         productName: product.name,
                         color: color,
                         size: size,
                         quantity: qty,
-                        previousStock: previousStock,
-                        newStock: product.colors[color][size],
+                        previousStock: currentStock,
+                        newStock: newStock,
                         reason: `New arrival - Invoice: ${invoice}`,
-                        user: document.getElementById('currentUserDisplay').textContent,
+                        user: currentUserData.name || currentUserData.email,
                         supplier: supplier,
-                        unitCost: unitCost
+                        unitCost: unitCost,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP,
+                        date: new Date().toISOString()
                     });
                 }
             });
             
             if (totalAdded === 0) {
-                showToast('Please enter quantities for at least one size', 'error');
+                showToast('Please enter quantities', 'error');
                 return;
             }
             
-            saveStockMovements();
-            resetStockForm();
-            updateDashboard();
-            renderProducts();
-            renderInventory();
-            
-            showToast(`Successfully added ${totalAdded} units of ${product.name} ${color}`, 'success');
+            // Batch update
+            db.ref().update(updates)
+                .then(() => {
+                    // Add movements
+                    const promises = movements.map(m => db.ref('stockMovements').push(m));
+                    return Promise.all(promises);
+                })
+                .then(() => {
+                    resetStockForm();
+                    showToast(`Added ${totalAdded} units of ${product.name} ${color}`, 'success');
+                })
+                .catch((error) => {
+                    showToast('Error: ' + error.message, 'error');
+                });
         }
 
-        // Adjustment Functions
-        function initializeAdjustmentSelects() {
-            const productSelect = document.getElementById('adjustProduct');
-            productSelect.innerHTML = '<option value="">Select product...</option>' +
-                Object.values(inventory).map(p => `<option value="${p.code}">${p.code} - ${p.name}</option>`).join('');
-        }
-
+        // Adjustment functions
         function selectAdjustmentType(type) {
             currentAdjustmentType = type;
             document.querySelectorAll('.adjustment-type-card').forEach(c => c.classList.remove('active'));
@@ -2312,12 +2284,12 @@
             const colorSelect = document.getElementById('adjustColor');
             
             if (!code) {
-                colorSelect.innerHTML = '<option value="">Select color...</option>';
+                colorSelect.innerHTML = '<option value="">Select...</option>';
                 return;
             }
             
             const product = inventory[code];
-            colorSelect.innerHTML = '<option value="">Select color...</option>' +
+            colorSelect.innerHTML = '<option value="">Select...</option>' +
                 Object.keys(product.colors).map(c => `<option value="${c}">${c}</option>`).join('');
         }
 
@@ -2327,14 +2299,13 @@
             const container = document.getElementById('adjustSizeGrid');
             
             if (!code || !color) {
-                container.innerHTML = '<p style="color: var(--secondary);">Select product and color</p>';
+                container.innerHTML = '<p style="color: var(--secondary); text-align: center; grid-column: 1 / -1;">Select product and color</p>';
                 return;
             }
             
-            const product = inventory[code];
-            const data = product.colors[color];
+            const data = inventory[code].colors[color];
             
-            container.innerHTML = [36,37,38,39,40,41,42,43].map(size => `
+            container.innerHTML = [36,37,38,39,40,41,42,43,44,45,46,47,48].map(size => `
                 <div class="stock-input-card">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                         <span class="size-label">${size}</span>
@@ -2350,7 +2321,7 @@
             document.getElementById('adjustProduct').value = '';
             document.getElementById('adjustColor').value = '';
             document.getElementById('adjustReason').value = '';
-            document.getElementById('adjustSizeGrid').innerHTML = '<p style="color: var(--secondary);">Select product and color</p>';
+            document.getElementById('adjustSizeGrid').innerHTML = '<p style="color: var(--secondary); text-align: center; grid-column: 1 / -1;">Select product and color</p>';
         }
 
         function processAdjustment() {
@@ -2359,34 +2330,37 @@
             const reason = document.getElementById('adjustReason').value;
             
             if (!code || !color || !reason) {
-                showToast('Please fill in all required fields', 'error');
+                showToast('Please fill all required fields', 'error');
                 return;
             }
             
-            const product = inventory[code];
+            let updates = {};
+            let movements = [];
             let hasChanges = false;
             
             [36,37,38,39,40,41,42,43].forEach(size => {
                 const input = document.getElementById(`adjustSize_${size}`);
                 const newValue = parseInt(input.value) || 0;
-                const currentValue = product.colors[color][size] || 0;
+                const currentValue = inventory[code].colors[color][size] || 0;
                 
                 if (newValue !== currentValue) {
                     const diff = newValue - currentValue;
-                    product.colors[color][size] = newValue;
+                    updates[`inventory/${code}/colors/${color}/${size}`] = newValue;
                     hasChanges = true;
                     
-                    recordStockMovement({
+                    movements.push({
                         type: currentAdjustmentType,
                         productCode: code,
-                        productName: product.name,
+                        productName: inventory[code].name,
                         color: color,
                         size: size,
                         quantity: diff,
                         previousStock: currentValue,
                         newStock: newValue,
                         reason: reason,
-                        user: document.getElementById('currentUserDisplay').textContent
+                        user: currentUserData.name || currentUserData.email,
+                        timestamp: firebase.database.ServerValue.TIMESTAMP,
+                        date: new Date().toISOString()
                     });
                 }
             });
@@ -2396,17 +2370,20 @@
                 return;
             }
             
-            saveStockMovements();
-            resetAdjustForm();
-            updateDashboard();
-            renderProducts();
-            renderInventory();
-            renderStockHistory();
-            
-            showToast('Stock adjustment saved successfully', 'success');
+            db.ref().update(updates)
+                .then(() => {
+                    const promises = movements.map(m => db.ref('stockMovements').push(m));
+                    return Promise.all(promises);
+                })
+                .then(() => {
+                    resetAdjustForm();
+                    showToast('Adjustment saved', 'success');
+                })
+                .catch((error) => {
+                    showToast('Error: ' + error.message, 'error');
+                });
         }
 
-        // Stock History Functions
         function renderStockHistory() {
             const filterDate = document.getElementById('historyFilterDate').value;
             const filterType = document.getElementById('historyFilterType').value;
@@ -2422,66 +2399,30 @@
                 filtered = filtered.filter(m => m.type === filterType);
             }
             
-            // Sort by date descending
-            filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
-            
             const tbody = document.getElementById('stockHistoryBody');
             
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 3rem; color: var(--secondary);">No stock movements found</td></tr>';
-            } else {
-                tbody.innerHTML = filtered.slice(0, 50).map(m => `
-                    <tr>
-                        <td>${new Date(m.date).toLocaleString()}</td>
-                        <td>
-                            <span class="adjustment-reason reason-${m.type}">
-                                <i class="fas fa-${getMovementIcon(m.type)}"></i>
-                                ${m.type.charAt(0).toUpperCase() + m.type.slice(1)}
-                            </span>
-                        </td>
-                        <td>${m.productName}<br><small style="color: var(--secondary);">${m.productCode}</small></td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                                <span style="width: 12px; height: 12px; border-radius: 50%; background: ${m.color.toLowerCase()}; ${m.color === 'Beige' ? 'background: #e8d5b5;' : ''} border: 1px solid var(--border);"></span>
-                                ${m.color}
-                            </span>
-                        </td>
-                        <td>${m.size}</td>
-                        <td style="font-weight: 600; color: ${m.quantity > 0 ? 'var(--success)' : 'var(--danger)'};">
-                            ${m.quantity > 0 ? '+' : ''}${m.quantity}
-                        </td>
-                        <td>${m.reason}</td>
-                        <td>${m.user}</td>
-                    </tr>
-                `).join('');
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 3rem; color: var(--secondary);">No movements found</td></tr>';
+                return;
             }
             
-            // Render timeline
-            const timelineDiv = document.getElementById('stockTimeline');
-            const recentMovements = filtered.slice(0, 10);
-            
-            if (recentMovements.length === 0) {
-                timelineDiv.innerHTML = '<p style="color: var(--secondary); text-align: center;">No recent activity</p>';
-            } else {
-                timelineDiv.innerHTML = recentMovements.map(m => `
-                    <div class="timeline-item">
-                        <div class="timeline-content">
-                            <div class="timeline-date">${new Date(m.date).toLocaleString()}</div>
-                            <div class="timeline-title">
-                                ${m.type === 'sale' ? 'Sale' : m.type === 'arrival' ? 'New Stock Arrival' : 'Stock Adjustment'} - 
-                                ${m.productName} ${m.color} Size ${m.size}
-                            </div>
-                            <div class="timeline-meta">
-                                <span style="color: ${m.quantity > 0 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">
-                                    ${m.quantity > 0 ? '+' : ''}${m.quantity} units
-                                </span> • 
-                                By ${m.user} • 
-                                ${m.reason}
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            }
+            tbody.innerHTML = filtered.slice(0, 50).map(m => `
+                <tr>
+                    <td>${new Date(m.date).toLocaleString()}</td>
+                    <td>
+                        <span class="adjustment-reason reason-${m.type}">
+                            <i class="fas fa-${getMovementIcon(m.type)}"></i>
+                            ${m.type}
+                        </span>
+                    </td>
+                    <td>${m.productName}<br><small>${m.productCode}</small></td>
+                    <td>${m.color} Size ${m.size}</td>
+                    <td style="font-weight: 600; color: ${m.quantity > 0 ? 'var(--success)' : 'var(--danger)'};">
+                        ${m.quantity > 0 ? '+' : ''}${m.quantity}
+                    </td>
+                    <td>${m.user}</td>
+                </tr>
+            `).join('');
         }
 
         function getMovementIcon(type) {
@@ -2496,279 +2437,109 @@
             return icons[type] || 'circle';
         }
 
-        // CSV Upload Functions
-        function handleCSVUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                const rows = text.split('\n').filter(r => r.trim());
-                const headers = rows[0].split(',');
-                
-                // Simple validation
-                if (rows.length < 2) {
-                    showToast('CSV file appears to be empty', 'error');
-                    return;
-                }
-                
-                // Preview first 5 rows
-                const previewBody = document.getElementById('csvPreviewBody');
-                previewBody.innerHTML = '';
-                
-                for (let i = 1; i < Math.min(rows.length, 6); i++) {
-                    const cols = rows[i].split(',');
-                    if (cols.length >= 10) {
-                        const totalQty = cols.slice(2, 10).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${cols[0]} - ${inventory[cols[0]]?.name || 'Unknown'}</td>
-                            <td>${cols[1]}</td>
-                            <td>${totalQty}</td>
-                            <td>${cols[10] || 'N/A'}</td>
-                            <td><span class="badge badge-success">Ready</span></td>
-                        `;
-                        previewBody.appendChild(row);
-                    }
-                }
-                
-                document.getElementById('csvPreview').style.display = 'block';
-                window.csvData = rows.slice(1);
-            };
-            reader.readAsText(file);
+        // ==========================================
+        // TEAM MANAGEMENT
+        // ==========================================
+        function openAddWorkerModal() {
+            document.getElementById('addWorkerModal').classList.add('active');
         }
 
-        function cancelCSVUpload() {
-            document.getElementById('csvFile').value = '';
-            document.getElementById('csvPreview').style.display = 'none';
-            window.csvData = null;
+        function closeWorkerModal() {
+            document.getElementById('addWorkerModal').classList.remove('active');
+            document.getElementById('workerName').value = '';
+            document.getElementById('workerEmail').value = '';
+            document.getElementById('workerPassword').value = '';
         }
 
-        function processCSVUpload() {
-            if (!window.csvData) return;
+        function addWorker() {
+            const name = document.getElementById('workerName').value;
+            const email = document.getElementById('workerEmail').value;
+            const password = document.getElementById('workerPassword').value;
             
-            let processed = 0;
+            if (!name || !email || !password || password.length < 6) {
+                showToast('Please fill all fields (password min 6 chars)', 'error');
+                return;
+            }
             
-            window.csvData.forEach(row => {
-                const cols = row.split(',');
-                if (cols.length < 10) return;
-                
-                const code = cols[0];
-                const color = cols[1];
-                const supplier = cols[10] || 'Unknown';
-                const invoice = cols[11] || 'N/A';
-                
-                if (!inventory[code] || !inventory[code].colors[color]) return;
-                
-                [36,37,38,39,40,41,42,43].forEach((size, idx) => {
-                    const qty = parseInt(cols[idx + 2]) || 0;
-                    if (qty > 0) {
-                        const previousStock = inventory[code].colors[color][size] || 0;
-                        inventory[code].colors[color][size] = previousStock + qty;
-                        processed++;
-                        
-                        recordStockMovement({
-                            type: 'arrival',
-                            productCode: code,
-                            productName: inventory[code].name,
-                            color: color,
-                            size: size,
-                            quantity: qty,
-                            previousStock: previousStock,
-                            newStock: inventory[code].colors[color][size],
-                            reason: `Bulk upload - Invoice: ${invoice}`,
-                            user: document.getElementById('currentUserDisplay').textContent,
-                            supplier: supplier
-                        });
-                    }
+            // Create secondary app for worker creation
+            const secondaryApp = firebase.initializeApp(firebaseConfig, 'Secondary');
+            const secondaryAuth = secondaryApp.auth();
+            
+            secondaryAuth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const uid = userCredential.user.uid;
+                    
+                    return db.ref('users/' + uid).set({
+                        email: email,
+                        name: name,
+                        role: 'worker',
+                        shopName: shopName,
+                        createdBy: currentUser.uid,
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    });
+                })
+                .then(() => {
+                    secondaryApp.delete();
+                    closeWorkerModal();
+                    showToast('Worker account created!', 'success');
+                })
+                .catch((error) => {
+                    secondaryApp.delete();
+                    showToast(error.message, 'error');
                 });
-            });
-            
-            saveStockMovements();
-            cancelCSVUpload();
-            updateDashboard();
-            renderProducts();
-            renderInventory();
-            
-            showToast(`Successfully processed ${processed} stock entries`, 'success');
         }
 
-        // Quick Adjustment Modal
-        function openAdjustmentModal() {
-            document.getElementById('adjustmentModal').classList.add('active');
-            const select = document.getElementById('quickAdjustProduct');
-            select.innerHTML = '<option value="">Select...</option>' +
-                Object.values(inventory).map(p => `<option value="${p.code}">${p.code} - ${p.name}</option>`).join('');
-        }
-
-        function closeAdjustmentModal() {
-            document.getElementById('adjustmentModal').classList.remove('active');
-        }
-
-        function populateQuickAdjustColors() {
-            const code = document.getElementById('quickAdjustProduct').value;
-            const colorSelect = document.getElementById('quickAdjustColor');
+        function renderTeam(users) {
+            const tbody = document.getElementById('teamBody');
             
-            if (!code) {
-                colorSelect.innerHTML = '<option value="">Select...</option>';
+            if (!users) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem;">No team members</td></tr>';
                 return;
             }
             
-            const product = inventory[code];
-            colorSelect.innerHTML = '<option value="">Select...</option>' +
-                Object.keys(product.colors).map(c => `<option value="${c}">${c}</option>`).join('');
-        }
-
-        function goToAdjustment() {
-            const code = document.getElementById('quickAdjustProduct').value;
-            const color = document.getElementById('quickAdjustColor').value;
-            
-            if (!code || !color) {
-                showToast('Please select product and color', 'error');
-                return;
-            }
-            
-            closeAdjustmentModal();
-            showSection('stock-management');
-            
-            // Switch to adjust tab
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab')[1].classList.add('active');
-            document.querySelectorAll('.stock-tab-content').forEach(t => t.classList.add('hidden'));
-            document.getElementById('adjust-stock').classList.remove('hidden');
-            
-            // Pre-fill
-            document.getElementById('adjustProduct').value = code;
-            loadAdjustProduct();
-            document.getElementById('adjustColor').value = color;
-            loadAdjustSizes();
-        }
-
-        // Sales History Functions
-        function renderSales() {
-            const tbody = document.getElementById('salesBody');
-            const filterDate = document.getElementById('salesFilterDate').value;
-            
-            let filteredSales = sales;
-            if (filterDate) {
-                const filter = new Date(filterDate).toDateString();
-                filteredSales = sales.filter(s => new Date(s.date).toDateString() === filter);
-            }
-            
-            if (filteredSales.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 3rem; color: var(--secondary);">No sales records found</td></tr>';
-                document.getElementById('salesSummary').innerHTML = '';
-                return;
-            }
-            
-            tbody.innerHTML = filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map(sale => `
+            tbody.innerHTML = Object.entries(users).map(([uid, user]) => `
                 <tr>
-                    <td>${new Date(sale.date).toLocaleString()}</td>
+                    <td>${user.name || 'Unknown'}</td>
+                    <td>${user.email}</td>
+                    <td><span class="badge ${user.role === 'admin' ? 'badge-admin' : 'badge-worker'}">${user.role}</span></td>
+                    <td>Active</td>
                     <td>
-                        <div style="font-weight: 600;">${sale.productName}</div>
-                        <div style="font-size: 0.875rem; color: var(--secondary);">${sale.productCode}</div>
-                    </td>
-                    <td>${sale.size}</td>
-                    <td>
-                        <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
-                            <span style="width: 12px; height: 12px; border-radius: 50%; background: ${sale.color.toLowerCase()}; ${sale.color === 'Beige' ? 'background: #e8d5b5;' : ''} border: 1px solid var(--border);"></span>
-                            ${sale.color}
-                        </span>
-                    </td>
-                    <td><span class="badge badge-worker">${sale.soldByName}</span></td>
-                    <td>${sale.customer}</td>
-                    <td>
-                        <span style="text-transform: capitalize; display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fas fa-${sale.payment === 'cash' ? 'money-bill' : sale.payment === 'card' ? 'credit-card' : sale.payment === 'mobile' ? 'mobile-alt' : 'university'}"></i>
-                            ${sale.payment}
-                        </span>
-                    </td>
-                    <td style="font-weight: 700; color: var(--success);">$${sale.amount.toFixed(2)}</td>
-                    <td>
-                        ${currentRole === 'admin' ? `
-                            <button class="btn btn-danger" onclick="deleteSale(${sale.id})" style="padding: 0.5rem;">
+                        ${uid !== currentUser.uid ? `
+                            <button class="btn btn-danger" onclick="deleteUser('${uid}')" style="padding: 0.5rem;">
                                 <i class="fas fa-trash"></i>
                             </button>
                         ` : '-'}
                     </td>
                 </tr>
             `).join('');
-            
-            const totalAmount = filteredSales.reduce((sum, s) => sum + s.amount, 0);
-            const byPayment = {};
-            filteredSales.forEach(s => {
-                byPayment[s.payment] = (byPayment[s.payment] || 0) + s.amount;
-            });
-            
-            document.getElementById('salesSummary').innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                    <div>
-                        <div style="font-size: 0.875rem; color: var(--secondary); margin-bottom: 0.25rem;">Total Sales</div>
-                        <div style="font-size: 1.5rem; font-weight: 700;">${filteredSales.length} transactions</div>
-                    </div>
-                    <div>
-                        <div style="font-size: 0.875rem; color: var(--secondary); margin-bottom: 0.25rem;">Total Revenue</div>
-                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);">$${totalAmount.toFixed(2)}</div>
-                    </div>
-                    <div style="display: flex; gap: 1rem;">
-                        ${Object.entries(byPayment).map(([method, amount]) => `
-                            <div style="text-align: center; padding: 0.5rem 1rem; background: white; border-radius: 8px;">
-                                <div style="font-size: 0.75rem; color: var(--secondary); text-transform: capitalize;">${method}</div>
-                                <div style="font-weight: 600;">$${amount.toFixed(2)}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
         }
 
-        function filterSales() {
-            renderSales();
-        }
-
-        function deleteSale(id) {
-            if (!confirm('Are you sure you want to delete this sale record? This will restore the stock.')) return;
+        function deleteUser(uid) {
+            if (!confirm('Delete this user?')) return;
             
-            const sale = sales.find(s => s.id === id);
-            if (sale) {
-                inventory[sale.productCode].colors[sale.color][sale.size]++;
-                
-                recordStockMovement({
-                    type: 'adjustment',
-                    productCode: sale.productCode,
-                    productName: sale.productName,
-                    color: sale.color,
-                    size: sale.size,
-                    quantity: 1,
-                    previousStock: inventory[sale.productCode].colors[sale.color][sale.size] - 1,
-                    newStock: inventory[sale.productCode].colors[sale.color][sale.size],
-                    reason: `Sale deletion - Restored from sale #${id}`,
-                    user: document.getElementById('currentUserDisplay').textContent
+            db.ref('users/' + uid).remove()
+                .then(() => {
+                    showToast('User deleted', 'success');
+                })
+                .catch((error) => {
+                    showToast(error.message, 'error');
                 });
-            }
-            
-            sales = sales.filter(s => s.id !== id);
-            localStorage.setItem('shoeShopSales', JSON.stringify(sales));
-            
-            updateDashboard();
-            renderProducts();
-            renderInventory();
-            renderSales();
-            showToast('Sale deleted and stock restored', 'success');
         }
 
-        // Analytics Functions
+        // ==========================================
+        // ANALYTICS
+        // ==========================================
         function updateAnalytics() {
             if (sales.length === 0) {
                 document.getElementById('topProduct').textContent = '-';
                 document.getElementById('topSize').textContent = '-';
                 document.getElementById('topColor').textContent = '-';
                 document.getElementById('topWorker').textContent = '-';
-                document.getElementById('sizeAnalytics').innerHTML = '<p style="text-align: center; color: var(--secondary);">No data available</p>';
+                document.getElementById('sizeAnalytics').innerHTML = '<p style="text-align: center; color: var(--secondary);">No data</p>';
                 return;
             }
             
+            // Top product
             const productCount = {};
             sales.forEach(s => {
                 productCount[s.productName] = (productCount[s.productName] || 0) + 1;
@@ -2776,59 +2547,64 @@
             const topProduct = Object.entries(productCount).sort((a, b) => b[1] - a[1])[0];
             document.getElementById('topProduct').textContent = topProduct ? topProduct[0] : '-';
             
+            // Top size
             const sizeCount = {};
             sales.forEach(s => {
                 sizeCount[s.size] = (sizeCount[s.size] || 0) + 1;
             });
             const topSize = Object.entries(sizeCount).sort((a, b) => b[1] - a[1])[0];
-            document.getElementById('topSize').textContent = topSize ? `Size ${topSize[0]} (${topSize[1]} sales)` : '-';
+            document.getElementById('topSize').textContent = topSize ? `Size ${topSize[0]}` : '-';
             
+            // Top color
             const colorCount = {};
             sales.forEach(s => {
                 colorCount[s.color] = (colorCount[s.color] || 0) + 1;
             });
             const topColor = Object.entries(colorCount).sort((a, b) => b[1] - a[1])[0];
-            document.getElementById('topColor').textContent = topColor ? `${topColor[0]} (${topColor[1]} sales)` : '-';
+            document.getElementById('topColor').textContent = topColor ? topColor[0] : '-';
             
+            // Top worker
             const workerCount = {};
             sales.forEach(s => {
                 workerCount[s.soldByName] = (workerCount[s.soldByName] || 0) + 1;
             });
             const topWorker = Object.entries(workerCount).sort((a, b) => b[1] - a[1])[0];
-            document.getElementById('topWorker').textContent = topWorker ? `${topWorker[0]} (${topWorker[1]} sales)` : '-';
+            document.getElementById('topWorker').textContent = topWorker ? topWorker[0] : '-';
             
-            const sizeDiv = document.getElementById('sizeAnalytics');
+            // Size distribution
             const maxCount = Math.max(...Object.values(sizeCount));
-            sizeDiv.innerHTML = [36,37,38,39,40,41,42,43].map(size => {
+            document.getElementById('sizeAnalytics').innerHTML = [36,37,38,39,40,41,42,43].map(size => {
                 const count = sizeCount[size] || 0;
-                const percentage = (count / (maxCount || 1)) * 100;
+                const pct = (count / (maxCount || 1)) * 100;
                 return `
                     <div style="margin-bottom: 1rem;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                            <span style="font-weight: 500;">Size ${size}</span>
+                            <span>Size ${size}</span>
                             <span style="color: var(--secondary);">${count} sold</span>
                         </div>
-                        <div style="height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
-                            <div style="height: 100%; width: ${percentage}%; background: var(--primary); border-radius: 4px; transition: width 0.5s;"></div>
+                        <div style="height: 8px; background: var(--border); border-radius: 4px;">
+                            <div style="height: 100%; width: ${pct}%; background: var(--primary); border-radius: 4px;"></div>
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
-        // Export Functions
+        // ==========================================
+        // EXPORTS
+        // ==========================================
         function exportInventory() {
-            let csv = 'Product,Code,Color,Size 36,Size 37,Size 38,Size 39,Size 40,Size 41,Size 42,Size 43,Total\n';
+            let csv = 'Product,Code,Color,36,37,38,39,40,41,42,43,44,45,46,47,48,Total\n';
             
             Object.values(inventory).forEach(product => {
                 Object.entries(product.colors).forEach(([color, data]) => {
-                    const sizes = [36,37,38,39,40,41,42,43].map(s => data[s] || 0);
+                    const sizes = [36,37,38,39,40,41,42,43,44,45,46,47,48].map(s => data[s] || 0);
                     const total = sizes.reduce((a, b) => a + b, 0);
                     csv += `"${product.name}",${product.code},${color},${sizes.join(',')},${total}\n`;
                 });
             });
             
-            downloadCSV(csv, 'inventory-export-' + new Date().toISOString().split('T')[0] + '.csv');
+            downloadCSV(csv, 'inventory.csv');
         }
 
         function exportSales() {
@@ -2837,12 +2613,12 @@
                 return;
             }
             
-            let csv = 'Date,Product,Code,Color,Size,Customer,Sold By,Payment Method,Amount,Notes\n';
+            let csv = 'Date,Product,Code,Color,Size,Customer,Sold By,Payment,Amount\n';
             sales.forEach(s => {
-                csv += `${s.date},"${s.productName}",${s.productCode},${s.color},${s.size},${s.customer},${s.soldByName},${s.payment},${s.amount},"${s.notes || ''}"\n`;
+                csv += `${s.date},"${s.productName}",${s.productCode},${s.color},${s.size},${s.customer},${s.soldByName},${s.payment},${s.amount}\n`;
             });
             
-            downloadCSV(csv, `sales-export-${new Date().toISOString().split('T')[0]}.csv`);
+            downloadCSV(csv, 'sales.csv');
         }
 
         function downloadCSV(csv, filename) {
@@ -2853,20 +2629,82 @@
             a.download = filename;
             a.click();
             window.URL.revokeObjectURL(url);
-            showToast('Export completed!', 'success');
+            showToast('Export complete', 'success');
         }
 
-        // Utility Functions
-        function showToast(message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toastMessage');
+        // ==========================================
+        // CSV UPLOAD
+        // ==========================================
+        function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
             
-            toast.className = `toast ${type} show`;
-            toastMessage.textContent = message;
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const rows = text.split('\n').filter(r => r.trim());
+                
+                if (rows.length < 2) {
+                    showToast('CSV appears empty', 'error');
+                    return;
+                }
+                
+                // Process CSV
+                let updates = {};
+                let movements = [];
+                
+                for (let i = 1; i < rows.length; i++) {
+                    const cols = rows[i].split(',');
+                    if (cols.length < 10) continue;
+                    
+                    const code = cols[0];
+                    const color = cols[1];
+                    
+                    if (!inventory[code] || !inventory[code].colors[color]) continue;
+                    
+                    [36,37,38,39,40,41,42,43].forEach((size, idx) => {
+                        const qty = parseInt(cols[idx + 2]) || 0;
+                        if (qty > 0) {
+                            const current = inventory[code].colors[color][size] || 0;
+                            updates[`inventory/${code}/colors/${color}/${size}`] = current + qty;
+                            
+                            movements.push({
+                                type: 'arrival',
+                                productCode: code,
+                                productName: inventory[code].name,
+                                color: color,
+                                size: size,
+                                quantity: qty,
+                                previousStock: current,
+                                newStock: current + qty,
+                                reason: 'Bulk CSV upload',
+                                user: currentUserData.name || currentUserData.email,
+                                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                                date: new Date().toISOString()
+                            });
+                        }
+                    });
+                }
+                
+                if (Object.keys(updates).length === 0) {
+                    showToast('No valid data found', 'error');
+                    return;
+                }
+                
+                db.ref().update(updates)
+                    .then(() => {
+                        const promises = movements.map(m => db.ref('stockMovements').push(m));
+                        return Promise.all(promises);
+                    })
+                    .then(() => {
+                        showToast('CSV upload complete', 'success');
+                        document.getElementById('csvFile').value = '';
+                    })
+                    .catch((error) => {
+                        showToast('Error: ' + error.message, 'error');
+                    });
+            };
+            reader.readAsText(file);
         }
 
         // Close modals on outside click
