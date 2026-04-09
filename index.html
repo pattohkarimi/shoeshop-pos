@@ -1,1 +1,2880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShoeShop POS - Inventory & Sales Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #06b6d4;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--dark);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+
+        .sidebar-header {
+            padding: 2rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .sidebar-header p {
+            font-size: 0.875rem;
+            opacity: 0.7;
+        }
+
+        .nav-menu {
+            padding: 1rem 0;
+        }
+
+        .nav-item {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(255,255,255,0.05);
+            border-left-color: var(--primary);
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header h2 {
+            font-size: 1.875rem;
+            font-weight: 700;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .badge-admin {
+            background: var(--primary);
+            color: white;
+        }
+
+        .badge-worker {
+            background: var(--success);
+            color: white;
+        }
+
+        .badge-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .badge-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .badge-info {
+            background: var(--info);
+            color: white;
+        }
+
+        /* Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .stat-icon.blue { background: #dbeafe; color: var(--primary); }
+        .stat-icon.green { background: #d1fae5; color: var(--success); }
+        .stat-icon.orange { background: #fef3c7; color: var(--warning); }
+        .stat-icon.red { background: #fee2e2; color: var(--danger); }
+        .stat-icon.cyan { background: #cffafe; color: var(--info); }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: var(--secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Tables */
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--secondary);
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        .product-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid var(--border);
+        }
+
+        .stock-bar {
+            width: 100px;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .stock-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        .stock-high { background: var(--success); }
+        .stock-medium { background: var(--warning); }
+        .stock-low { background: var(--danger); }
+
+        /* Buttons */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+            font-size: 0.875rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .btn-info {
+            background: var(--info);
+            color: white;
+        }
+
+        /* Forms */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: var(--secondary);
+        }
+
+        .form-control {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s;
+        }
+
+        .modal-content.large {
+            max-width: 1000px;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--secondary);
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: var(--light);
+            color: var(--dark);
+        }
+
+        /* Product Cards for POS */
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: all 0.3s;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #f1f5f9;
+        }
+
+        .product-details {
+            padding: 1.5rem;
+        }
+
+        .product-code {
+            font-size: 0.875rem;
+            color: var(--secondary);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-name {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1rem;
+        }
+
+        .price-tag {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stock-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        /* Size Selector */
+        .size-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .size-btn {
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .size-btn:hover:not(:disabled) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .size-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .size-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            background: #f1f5f9;
+        }
+
+        /* Color Selector */
+        .color-options {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .color-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .color-btn.active {
+            box-shadow: 0 0 0 2px var(--primary);
+            transform: scale(1.1);
+        }
+
+        /* Transaction Log */
+        .transaction-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .transaction-item:hover {
+            background: #f8fafc;
+        }
+
+        .transaction-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .transaction-details {
+            flex: 1;
+        }
+
+        .transaction-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .transaction-meta {
+            font-size: 0.875rem;
+            color: var(--secondary);
+        }
+
+        .transaction-amount {
+            font-weight: 700;
+            font-size: 1.125rem;
+        }
+
+        /* Stock Input Specific Styles */
+        .stock-input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .stock-input-card {
+            background: #f8fafc;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .stock-input-card:hover {
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .stock-input-card.active {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .size-stock-input {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .size-label {
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+            padding: 0.5rem;
+            background: var(--dark);
+            color: white;
+            border-radius: 6px;
+        }
+
+        .stock-number-input {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .adjustment-type-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .adjustment-type-card {
+            padding: 1.5rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .adjustment-type-card:hover {
+            border-color: var(--primary);
+            background: #f8fafc;
+        }
+
+        .adjustment-type-card.active {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .adjustment-type-card i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--secondary);
+        }
+
+        .adjustment-type-card.active i {
+            color: var(--primary);
+        }
+
+        .adjustment-reason {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .reason-new-arrival { background: #dbeafe; color: var(--primary); }
+        .reason-restoration { background: #d1fae5; color: var(--success); }
+        .reason-correction { background: #fef3c7; color: var(--warning); }
+        .reason-damage { background: #fee2e2; color: var(--danger); }
+        .reason-return { background: #cffafe; color: var(--info); }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: var(--primary);
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .adjustment-type-selector {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* Login Screen */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--dark) 0%, var(--primary-dark) 100%);
+        }
+
+        .login-box {
+            background: white;
+            padding: 3rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-logo h1 {
+            font-size: 1.875rem;
+            color: var(--dark);
+        }
+
+        .role-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .role-card {
+            padding: 1.5rem;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .role-card:hover {
+            border-color: var(--primary);
+            background: #f8fafc;
+        }
+
+        .role-card.active {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .role-card i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--secondary);
+        }
+
+        .role-card.active i {
+            color: var(--primary);
+        }
+
+        /* Utility Classes */
+        .hidden { display: none !important; }
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        .text-warning { color: var(--warning); }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .gap-2 { gap: 0.5rem; }
+        .mt-4 { margin-top: 1rem; }
+        .mb-4 { margin-bottom: 1rem; }
+        .w-full { width: 100%; }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--dark);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow-lg);
+            display: none;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 3000;
+            animation: slideIn 0.3s;
+        }
+
+        .toast.show {
+            display: flex;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .action-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .action-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .action-card i {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .action-card h3 {
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .action-card p {
+            font-size: 0.875rem;
+            color: var(--secondary);
+        }
+
+        /* Batch Upload Area */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 3rem;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: #f8fafc;
+        }
+
+        .upload-area i {
+            font-size: 3rem;
+            color: var(--secondary);
+            margin-bottom: 1rem;
+        }
+
+        /* History Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 2rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.75rem;
+            top: 0.25rem;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: 2px solid white;
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        .timeline-content {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+
+        .timeline-date {
+            font-size: 0.875rem;
+            color: var(--secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-meta {
+            font-size: 0.875rem;
+            color: var(--secondary);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <div class="login-logo">
+                <i class="fas fa-shoe-prints fa-3x text-primary" style="color: var(--primary); margin-bottom: 1rem;"></i>
+                <h1>ShoeShop POS</h1>
+                <p style="color: var(--secondary); margin-top: 0.5rem;">Inventory & Sales Management</p>
+            </div>
+
+            <div class="role-selector">
+                <div class="role-card active" onclick="selectRole('admin')">
+                    <i class="fas fa-user-shield"></i>
+                    <div style="font-weight: 600;">Admin</div>
+                    <div style="font-size: 0.875rem; color: var(--secondary);">Full Access</div>
+                </div>
+                <div class="role-card" onclick="selectRole('worker')">
+                    <i class="fas fa-user"></i>
+                    <div style="font-weight: 600;">Worker</div>
+                    <div style="font-size: 0.875rem; color: var(--secondary);">Sales Only</div>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label>Select User</label>
+                <select class="form-control" id="userSelect">
+                    <option value="admin">Administrator</option>
+                    <option value="worker1">John - Sales Rep</option>
+                    <option value="worker2">Sarah - Sales Rep</option>
+                    <option value="worker3">Mike - Sales Rep</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="login()">
+                <i class="fas fa-sign-in-alt"></i> Access System
+            </button>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="app-container hidden">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-shoe-prints fa-2x" style="margin-bottom: 1rem; opacity: 0.9;"></i>
+                <h1>ShoeShop POS</h1>
+                <p>New Arrivals March 2026</p>
+            </div>
+
+            <nav class="nav-menu">
+                <div class="nav-item active" onclick="showSection('dashboard')">
+                    <i class="fas fa-chart-dashboard"></i>
+                    <span>Dashboard</span>
+                </div>
+                <div class="nav-item" onclick="showSection('pos')">
+                    <i class="fas fa-cash-register"></i>
+                    <span>Point of Sale</span>
+                </div>
+                <div class="nav-item" onclick="showSection('inventory')">
+                    <i class="fas fa-boxes"></i>
+                    <span>Inventory</span>
+                </div>
+                <div class="nav-item admin-only hidden" onclick="showSection('stock-management')">
+                    <i class="fas fa-warehouse"></i>
+                    <span>Stock Input</span>
+                </div>
+                <div class="nav-item" onclick="showSection('sales')">
+                    <i class="fas fa-receipt"></i>
+                    <span>Sales History</span>
+                </div>
+                <div class="nav-item admin-only hidden" onclick="showSection('analytics')">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </div>
+                <div class="nav-item" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </div>
+            </nav>
+
+            <div style="padding: 2rem; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto;">
+                <div style="font-size: 0.875rem; opacity: 0.7; margin-bottom: 0.5rem;">Current User</div>
+                <div id="currentUserDisplay" style="font-weight: 600;">Admin</div>
+                <div id="currentRoleDisplay" class="badge badge-admin" style="margin-top: 0.5rem; display: inline-block;">Administrator</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section">
+                <div class="header">
+                    <h2>Dashboard Overview</h2>
+                    <div class="user-info">
+                        <span id="currentDate"></span>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value" id="totalStock">243</div>
+                                <div class="stat-label">Total Items in Stock</div>
+                            </div>
+                            <div class="stat-icon blue">
+                                <i class="fas fa-box"></i>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--secondary);">
+                            <span class="text-success"><i class="fas fa-arrow-up"></i> 2 products</span> active
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value" id="todaySales">0</div>
+                                <div class="stat-label">Today's Sales</div>
+                            </div>
+                            <div class="stat-icon green">
+                                <i class="fas fa-dollar-sign"></i>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--secondary);">
+                            <span id="todayRevenue">$0.00</span> revenue today
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value" id="lowStockCount">0</div>
+                                <div class="stat-label">Low Stock Alerts</div>
+                            </div>
+                            <div class="stat-icon orange">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--secondary);">
+                            Items needing restock
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div>
+                                <div class="stat-value" id="totalRevenue">$0.00</div>
+                                <div class="stat-label">Total Revenue</div>
+                            </div>
+                            <div class="stat-icon red">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--secondary);">
+                            Since March 8, 2026
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions for Admin -->
+                <div class="quick-actions admin-only hidden" id="adminQuickActions">
+                    <div class="action-card" onclick="showSection('stock-management')">
+                        <i class="fas fa-plus-circle"></i>
+                        <h3>Add Stock</h3>
+                        <p>Input new arrivals or restock existing items</p>
+                    </div>
+                    <div class="action-card" onclick="openAdjustmentModal()">
+                        <i class="fas fa-edit"></i>
+                        <h3>Adjust Stock</h3>
+                        <p>Correct inventory counts or mark damages</p>
+                    </div>
+                    <div class="action-card" onclick="showSection('sales')">
+                        <i class="fas fa-file-export"></i>
+                        <h3>Export Data</h3>
+                        <p>Download sales and inventory reports</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Recent Transactions</div>
+                        <button class="btn btn-secondary" onclick="showSection('sales')">View All</button>
+                    </div>
+                    <div id="recentTransactions" style="max-height: 400px; overflow-y: auto;">
+                        <div style="padding: 3rem; text-align: center; color: var(--secondary);">
+                            <i class="fas fa-receipt fa-3x" style="margin-bottom: 1rem; opacity: 0.3;"></i>
+                            <p>No transactions yet. Start selling!</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- POS Section -->
+            <section id="pos" class="section hidden">
+                <div class="header">
+                    <h2><i class="fas fa-cash-register"></i> Point of Sale</h2>
+                    <button class="btn btn-primary" onclick="openSaleModal()">
+                        <i class="fas fa-plus"></i> New Sale
+                    </button>
+                </div>
+
+                <div class="products-grid" id="productGrid">
+                    <!-- Products will be populated here -->
+                </div>
+            </section>
+
+            <!-- Inventory Section -->
+            <section id="inventory" class="section hidden">
+                <div class="header">
+                    <h2><i class="fas fa-boxes"></i> Inventory Management</h2>
+                    <div class="flex gap-2">
+                        <button class="btn btn-secondary" onclick="exportInventory()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                        <button class="btn btn-primary admin-only hidden" onclick="showSection('stock-management')">
+                            <i class="fas fa-plus"></i> Add Stock
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table id="inventoryTable">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Code</th>
+                                    <th>Color</th>
+                                    <th>Sizes (36-43)</th>
+                                    <th>Total Stock</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryBody">
+                                <!-- Inventory rows populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stock Management Section (Admin Only) -->
+            <section id="stock-management" class="section hidden">
+                <div class="header">
+                    <h2><i class="fas fa-warehouse"></i> Stock Input & Management</h2>
+                    <div class="user-info">
+                        <button class="btn btn-secondary" onclick="showSection('inventory')">
+                            <i class="fas fa-arrow-left"></i> Back to Inventory
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <div class="tab active" onclick="switchStockTab('add-stock')">
+                        <i class="fas fa-plus-circle"></i> Add New Stock
+                    </div>
+                    <div class="tab" onclick="switchStockTab('adjust-stock')">
+                        <i class="fas fa-edit"></i> Adjust/Restock
+                    </div>
+                    <div class="tab" onclick="switchStockTab('stock-history')">
+                        <i class="fas fa-history"></i> Stock History
+                    </div>
+                    <div class="tab" onclick="switchStockTab('bulk-upload')">
+                        <i class="fas fa-file-csv"></i> Bulk Upload
+                    </div>
+                </div>
+
+                <!-- Add New Stock Tab -->
+                <div id="add-stock" class="stock-tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Record New Stock Arrival</div>
+                        </div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Product Code *</label>
+                                <select class="form-control" id="stockProductCode" onchange="loadProductForStock()">
+                                    <option value="">Select product...</option>
+                                    <option value="D1062">D1062 - Breathable Loafer</option>
+                                    <option value="G1164">G1164 - Cross-Strap Sandals</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Color *</label>
+                                <select class="form-control" id="stockColor" onchange="updateStockInputDisplay()">
+                                    <option value="">Select color...</option>
+                                    <option value="Black">Black</option>
+                                    <option value="Grey">Grey</option>
+                                    <option value="Blue">Blue</option>
+                                    <option value="Beige">Beige</option>
+                                    <option value="Brown">Brown</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Supplier/Source</label>
+                                <input type="text" class="form-control" id="stockSupplier" placeholder="e.g., Main Supplier, Factory Direct">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Invoice/Reference Number</label>
+                                <input type="text" class="form-control" id="stockInvoice" placeholder="e.g., INV-2026-0120">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Date Received *</label>
+                                <input type="date" class="form-control" id="stockDate" value="2026-04-09">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Unit Cost (USD)</label>
+                                <input type="number" step="0.01" class="form-control" id="stockUnitCost" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <div style="padding: 0 1.5rem;">
+                            <label style="font-weight: 600; margin-bottom: 1rem; display: block;">Enter Quantity by Size *</label>
+                            <div class="stock-input-grid" id="stockSizeInputs">
+                                <!-- Size inputs generated by JS -->
+                            </div>
+                        </div>
+
+                        <div style="padding: 1.5rem; background: #f8fafc; border-top: 1px solid var(--border); margin-top: 1.5rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-size: 0.875rem; color: var(--secondary);">Total Units Being Added</div>
+                                    <div style="font-size: 2rem; font-weight: 700;" id="totalStockBeingAdded">0</div>
+                                </div>
+                                <div style="display: flex; gap: 1rem;">
+                                    <button class="btn btn-secondary" onclick="resetStockForm()">
+                                        <i class="fas fa-undo"></i> Reset
+                                    </button>
+                                    <button class="btn btn-success" onclick="processStockArrival()">
+                                        <i class="fas fa-check"></i> Record Stock Arrival
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Adjust Stock Tab -->
+                <div id="adjust-stock" class="stock-tab-content hidden">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Stock Adjustment</div>
+                        </div>
+                        
+                        <div style="padding: 1.5rem;">
+                            <label style="font-weight: 600; margin-bottom: 1rem; display: block;">Adjustment Type</label>
+                            <div class="adjustment-type-selector">
+                                <div class="adjustment-type-card active" onclick="selectAdjustmentType('restock')">
+                                    <i class="fas fa-plus" style="color: var(--success);"></i>
+                                    <div style="font-weight: 600; margin-top: 0.5rem;">Restock</div>
+                                    <div style="font-size: 0.875rem; color: var(--secondary);">Add to existing</div>
+                                </div>
+                                <div class="adjustment-type-card" onclick="selectAdjustmentType('correction')">
+                                    <i class="fas fa-balance-scale" style="color: var(--warning);"></i>
+                                    <div style="font-weight: 600; margin-top: 0.5rem;">Correction</div>
+                                    <div style="font-size: 0.875rem; color: var(--secondary);">Fix count errors</div>
+                                </div>
+                                <div class="adjustment-type-card" onclick="selectAdjustmentType('damage')">
+                                    <i class="fas fa-trash-alt" style="color: var(--danger);"></i>
+                                    <div style="font-weight: 600; margin-top: 0.5rem;">Damage/Loss</div>
+                                    <div style="font-size: 0.875rem; color: var(--secondary);">Remove stock</div>
+                                </div>
+                            </div>
+
+                            <div class="form-grid" style="padding: 0; margin-top: 1.5rem;">
+                                <div class="form-group">
+                                    <label>Product *</label>
+                                    <select class="form-control" id="adjustProduct" onchange="loadAdjustProduct()">
+                                        <option value="">Select product...</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Color *</label>
+                                    <select class="form-control" id="adjustColor" onchange="loadAdjustSizes()">
+                                        <option value="">Select color...</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Reason/Notes *</label>
+                                    <input type="text" class="form-control" id="adjustReason" placeholder="e.g., Damaged in transit, Inventory count correction">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Adjusted By</label>
+                                    <input type="text" class="form-control" id="adjustBy" readonly>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 1.5rem;">
+                                <label style="font-weight: 600; margin-bottom: 1rem; display: block;">Current vs Adjusted Quantities</label>
+                                <div id="adjustSizeGrid" class="stock-input-grid">
+                                    <!-- Adjustment inputs generated by JS -->
+                                </div>
+                            </div>
+
+                            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                                <button class="btn btn-secondary" onclick="resetAdjustForm()">Reset</button>
+                                <button class="btn btn-primary" onclick="processAdjustment()">
+                                    <i class="fas fa-save"></i> Save Adjustment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock History Tab -->
+                <div id="stock-history" class="stock-tab-content hidden">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Stock Movement History</div>
+                            <div class="flex gap-2">
+                                <input type="date" class="form-control" id="historyFilterDate" onchange="renderStockHistory()">
+                                <select class="form-control" id="historyFilterType" onchange="renderStockHistory()">
+                                    <option value="">All Types</option>
+                                    <option value="arrival">New Arrival</option>
+                                    <option value="restock">Restock</option>
+                                    <option value="sale">Sale</option>
+                                    <option value="adjustment">Adjustment</option>
+                                    <option value="damage">Damage/Loss</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date/Time</th>
+                                        <th>Type</th>
+                                        <th>Product</th>
+                                        <th>Color</th>
+                                        <th>Size</th>
+                                        <th>Qty Change</th>
+                                        <th>Reason/Source</th>
+                                        <th>User</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stockHistoryBody">
+                                    <!-- History populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top: 2rem;">
+                        <div class="card-header">
+                            <div class="card-title">Recent Activity Timeline</div>
+                        </div>
+                        <div style="padding: 1.5rem;">
+                            <div class="timeline" id="stockTimeline">
+                                <!-- Timeline populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bulk Upload Tab -->
+                <div id="bulk-upload" class="stock-tab-content hidden">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Bulk Stock Upload</div>
+                        </div>
+                        <div style="padding: 2rem;">
+                            <div class="upload-area" onclick="document.getElementById('csvFile').click()">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <h3 style="margin-bottom: 0.5rem;">Click to Upload CSV</h3>
+                                <p style="color: var(--secondary); margin-bottom: 1rem;">or drag and drop your file here</p>
+                                <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
+                                <div style="font-size: 0.875rem; color: var(--secondary); background: #f8fafc; padding: 1rem; border-radius: 8px; text-align: left; max-width: 500px; margin: 0 auto;">
+                                    <strong>Required CSV Format:</strong><br>
+                                    product_code,color,size_36,size_37,size_38,size_39,size_40,size_41,size_42,size_43,supplier,invoice,date<br>
+                                    D1062,Black,5,5,10,10,10,10,5,5,Supplier A,INV-001,2026-04-09
+                                </div>
+                            </div>
+
+                            <div id="csvPreview" style="margin-top: 1.5rem; display: none;">
+                                <h4 style="margin-bottom: 1rem;">Preview</h4>
+                                <div class="table-container">
+                                    <table id="csvPreviewTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Product</th>
+                                                <th>Color</th>
+                                                <th>Total Qty</th>
+                                                <th>Supplier</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="csvPreviewBody"></tbody>
+                                    </table>
+                                </div>
+                                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1rem;">
+                                    <button class="btn btn-secondary" onclick="cancelCSVUpload()">Cancel</button>
+                                    <button class="btn btn-success" onclick="processCSVUpload()">
+                                        <i class="fas fa-check"></i> Confirm Upload
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sales History Section -->
+            <section id="sales" class="section hidden">
+                <div class="header">
+                    <h2><i class="fas fa-receipt"></i> Sales History</h2>
+                    <div class="flex gap-2">
+                        <input type="date" class="form-control" id="salesFilterDate" onchange="filterSales()">
+                        <button class="btn btn-secondary" onclick="exportSales()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date/Time</th>
+                                    <th>Product</th>
+                                    <th>Size</th>
+                                    <th>Color</th>
+                                    <th>Sold By</th>
+                                    <th>To (Customer)</th>
+                                    <th>Payment</th>
+                                    <th>Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="salesBody">
+                                <!-- Sales populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="salesSummary" style="padding: 1.5rem; background: #f8fafc; border-top: 1px solid var(--border);">
+                        <!-- Summary stats -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analytics Section (Admin Only) -->
+            <section id="analytics" class="section hidden">
+                <div class="header">
+                    <h2><i class="fas fa-chart-line"></i> Sales Analytics</h2>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="topProduct">-</div>
+                        <div class="stat-label">Best Selling Product</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="topSize">-</div>
+                        <div class="stat-label">Most Popular Size</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="topColor">-</div>
+                        <div class="stat-label">Most Popular Color</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="topWorker">-</div>
+                        <div class="stat-label">Top Performer</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">Stock Movement by Size</div>
+                    </div>
+                    <div style="padding: 1.5rem;">
+                        <div id="sizeAnalytics"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Sale Modal -->
+    <div id="saleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Record New Sale</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid" style="padding: 0; gap: 1rem;">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Select Product *</label>
+                        <select class="form-control" id="saleProduct" onchange="updateProductOptions()">
+                            <option value="">Choose a product...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Color *</label>
+                        <div class="color-options" id="colorOptions"></div>
+                        <input type="hidden" id="selectedColor">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Size (36-43) *</label>
+                        <div class="size-grid" id="sizeOptions"></div>
+                        <input type="hidden" id="selectedSize">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Customer Name *</label>
+                        <input type="text" class="form-control" id="customerName" placeholder="Enter customer name">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Payment Method *</label>
+                        <select class="form-control" id="paymentMethod">
+                            <option value="cash">Cash</option>
+                            <option value="card">Credit Card</option>
+                            <option value="mobile">Mobile Money</option>
+                            <option value="transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sold By *</label>
+                        <select class="form-control" id="soldBy">
+                            <option value="worker1">John - Sales Rep</option>
+                            <option value="worker2">Sarah - Sales Rep</option>
+                            <option value="worker3">Mike - Sales Rep</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Price</label>
+                        <input type="text" class="form-control" id="salePrice" readonly style="font-weight: 600; color: var(--primary);">
+                    </div>
+
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Notes (Optional)</label>
+                        <textarea class="form-control" id="saleNotes" rows="2" placeholder="Any additional details..."></textarea>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button class="btn btn-secondary" onclick="closeModal()" style="flex: 1;">Cancel</button>
+                    <button class="btn btn-success" onclick="processSale()" style="flex: 1;">
+                        <i class="fas fa-check"></i> Complete Sale
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adjustment Modal (Quick Access) -->
+    <div id="adjustmentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Quick Stock Adjustment</h3>
+                <button class="close-btn" onclick="closeAdjustmentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 1rem; color: var(--secondary);">Select a product and color to adjust stock levels:</p>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>Product</label>
+                    <select class="form-control" id="quickAdjustProduct" onchange="populateQuickAdjustColors()">
+                        <option value="">Select...</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label>Color</label>
+                    <select class="form-control" id="quickAdjustColor">
+                        <option value="">Select...</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary w-full" onclick="goToAdjustment()">
+                    <i class="fas fa-arrow-right"></i> Proceed to Adjustment
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">Operation successful</span>
+    </div>
+
+    <script>
+        // Data Structure based on your invoices
+        const inventory = {
+            D1062: {
+                code: 'D1062',
+                name: 'Breathable Loafer',
+                type: 'loafer',
+                unitPrice: 5.80,
+                colors: {
+                    'Black': { 36: 1, 37: 3, 38: 7, 39: 8, 40: 8, 41: 7, 42: 6, 43: 5, image: 'https://images.unsplash.com/photo-1614252369475-531eba835f76?w=400&h=300&fit=crop' },
+                    'Grey': { 36: 1, 37: 2, 38: 6, 39: 7, 40: 7, 41: 6, 42: 5, 43: 4, image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400&h=300&fit=crop' },
+                    'Blue': { 36: 1, 37: 2, 38: 6, 39: 7, 40: 7, 41: 6, 42: 5, 43: 4, image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400&h=300&fit=crop' }
+                }
+            },
+            G1164: {
+                code: 'G1164',
+                name: 'Cross-Strap Sandals',
+                type: 'sandals',
+                unitPrice: 3.40,
+                colors: {
+                    'Black': { 36: 2, 37: 3, 38: 7, 39: 8, 40: 8, 41: 7, 42: 6, 43: 5, image: 'https://images.unsplash.com/photo-1603487742131-4160ec999306?w=400&h=300&fit=crop' },
+                    'Beige': { 36: 1, 37: 2, 38: 6, 39: 7, 40: 7, 41: 6, 42: 5, 43: 4, image: 'https://images.unsplash.com/photo-1603145733190-59811e523c72?w=400&h=300&fit=crop' },
+                    'Brown': { 36: 1, 37: 2, 38: 6, 39: 7, 40: 7, 41: 6, 42: 5, 43: 4, image: 'https://images.unsplash.com/photo-1621993202323-c430e1b3f1d9?w=400&h=300&fit=crop' }
+                }
+            }
+        };
+
+        let sales = JSON.parse(localStorage.getItem('shoeShopSales')) || [];
+        let stockMovements = JSON.parse(localStorage.getItem('shoeShopStockMovements')) || [];
+        let currentUser = null;
+        let currentRole = null;
+        let currentAdjustmentType = 'restock';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('en-US', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            
+            document.getElementById('salesFilterDate').valueAsDate = new Date();
+            document.getElementById('stockDate').valueAsDate = new Date();
+            document.getElementById('historyFilterDate').valueAsDate = new Date();
+            
+            // Initialize stock movement tracking if empty
+            if (stockMovements.length === 0) {
+                initializeStockHistory();
+            }
+        });
+
+        function initializeStockHistory() {
+            // Record initial stock as "arrival"
+            Object.values(inventory).forEach(product => {
+                Object.entries(product.colors).forEach(([color, data]) => {
+                    [36,37,38,39,40,41,42,43].forEach(size => {
+                        if (data[size] > 0) {
+                            stockMovements.push({
+                                id: Date.now() + Math.random(),
+                                date: '2026-03-08T00:00:00',
+                                type: 'arrival',
+                                productCode: product.code,
+                                productName: product.name,
+                                color: color,
+                                size: size,
+                                quantity: data[size],
+                                previousStock: 0,
+                                newStock: data[size],
+                                reason: 'Initial stock - March 8th Arrival',
+                                user: 'System',
+                                supplier: 'Invoice 2026-0120'
+                            });
+                        }
+                    });
+                });
+            });
+            saveStockMovements();
+        }
+
+        function selectRole(role) {
+            currentRole = role;
+            document.querySelectorAll('.role-card').forEach(card => card.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            
+            const userSelect = document.getElementById('userSelect');
+            if (role === 'admin') {
+                userSelect.innerHTML = '<option value="admin">Administrator</option>';
+            } else {
+                userSelect.innerHTML = `
+                    <option value="worker1">John - Sales Rep</option>
+                    <option value="worker2">Sarah - Sales Rep</option>
+                    <option value="worker3">Mike - Sales Rep</option>
+                `;
+            }
+        }
+
+        function login() {
+            currentUser = document.getElementById('userSelect').value;
+            currentRole = document.querySelector('.role-card.active').innerText.includes('Admin') ? 'admin' : 'worker';
+            
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            
+            // Update UI based on role
+            document.getElementById('currentUserDisplay').textContent = 
+                currentUser === 'admin' ? 'Administrator' : 
+                currentUser === 'worker1' ? 'John' :
+                currentUser === 'worker2' ? 'Sarah' : 'Mike';
+            
+            document.getElementById('currentRoleDisplay').textContent = 
+                currentRole === 'admin' ? 'Administrator' : 'Sales Representative';
+            
+            document.getElementById('currentRoleDisplay').className = 
+                currentRole === 'admin' ? 'badge badge-admin' : 'badge badge-worker';
+            
+            // Show/hide admin elements
+            if (currentRole === 'admin') {
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+            } else {
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+            }
+            
+            // Set adjustment by field
+            document.getElementById('adjustBy').value = document.getElementById('currentUserDisplay').textContent;
+            
+            updateDashboard();
+            renderProducts();
+            renderInventory();
+            renderSales();
+            initializeAdjustmentSelects();
+            
+            showToast('Welcome back! ' + document.getElementById('currentUserDisplay').textContent, 'success');
+        }
+
+        function logout() {
+            location.reload();
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            // Update nav active state
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => {
+                if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(sectionId)) {
+                    item.classList.add('active');
+                }
+            });
+            
+            if (sectionId === 'analytics') {
+                updateAnalytics();
+            } else if (sectionId === 'stock-management') {
+                renderStockHistory();
+            }
+        }
+
+        // Dashboard Functions
+        function updateDashboard() {
+            const today = new Date().toDateString();
+            const todaySales = sales.filter(s => new Date(s.date).toDateString() === today);
+            const todayRevenue = todaySales.reduce((sum, s) => sum + s.amount, 0);
+            const totalRevenue = sales.reduce((sum, s) => sum + s.amount, 0);
+            
+            document.getElementById('todaySales').textContent = todaySales.length;
+            document.getElementById('todayRevenue').textContent = '$' + todayRevenue.toFixed(2);
+            document.getElementById('totalRevenue').textContent = '$' + totalRevenue.toFixed(2);
+            
+            // Calculate total stock
+            let totalStock = 0;
+            let lowStock = 0;
+            Object.values(inventory).forEach(product => {
+                Object.values(product.colors).forEach(color => {
+                    [36,37,38,39,40,41,42,43].forEach(size => {
+                        const qty = color[size] || 0;
+                        totalStock += qty;
+                        if (qty <= 2 && qty > 0) lowStock++;
+                    });
+                });
+            });
+            
+            document.getElementById('totalStock').textContent = totalStock;
+            document.getElementById('lowStockCount').textContent = lowStock;
+            
+            // Recent transactions
+            const recentDiv = document.getElementById('recentTransactions');
+            if (sales.length === 0) {
+                recentDiv.innerHTML = `
+                    <div style="padding: 3rem; text-align: center; color: var(--secondary);">
+                        <i class="fas fa-receipt fa-3x" style="margin-bottom: 1rem; opacity: 0.3;"></i>
+                        <p>No transactions yet. Start selling!</p>
+                    </div>
+                `;
+            } else {
+                recentDiv.innerHTML = sales.slice(-5).reverse().map(sale => `
+                    <div class="transaction-item">
+                        <div class="transaction-icon ${sale.payment === 'cash' ? 'green' : 'blue'}">
+                            <i class="fas fa-${sale.payment === 'cash' ? 'money-bill' : 'credit-card'}"></i>
+                        </div>
+                        <div class="transaction-details">
+                            <div class="transaction-title">${sale.productName} - Size ${sale.size} ${sale.color}</div>
+                            <div class="transaction-meta">
+                                Sold by ${sale.soldByName} to ${sale.customer} • ${new Date(sale.date).toLocaleString()}
+                            </div>
+                        </div>
+                        <div class="transaction-amount">$${sale.amount.toFixed(2)}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // POS Functions
+        function renderProducts() {
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = '';
+            
+            Object.values(inventory).forEach(product => {
+                Object.entries(product.colors).forEach(([color, data]) => {
+                    const totalStock = Object.values(data).filter(v => typeof v === 'number').reduce((a, b) => a + b, 0);
+                    
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    card.onclick = () => openSaleModal(product.code, color);
+                    
+                    card.innerHTML = `
+                        <img src="${data.image}" alt="${product.name}" class="product-image">
+                        <div class="product-details">
+                            <div class="product-code">${product.code} • ${color}</div>
+                            <div class="product-name">${product.name}</div>
+                            <div class="product-meta">
+                                <span class="price-tag">$${product.unitPrice.toFixed(2)}</span>
+                                <span class="stock-badge ${totalStock > 10 ? 'text-success' : totalStock > 5 ? 'text-warning' : 'text-danger'}" 
+                                      style="background: ${totalStock > 10 ? '#d1fae5' : totalStock > 5 ? '#fef3c7' : '#fee2e2'}">
+                                    ${totalStock} in stock
+                                </span>
+                            </div>
+                            <div class="size-grid" style="margin-top: 0.75rem; pointer-events: none;">
+                                ${[36,37,38,39,40,41,42,43].map(size => `
+                                    <div class="size-btn ${data[size] > 0 ? '' : 'disabled'}" 
+                                         style="padding: 0.25rem; font-size: 0.75rem;">
+                                        ${size}: ${data[size] || 0}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            });
+        }
+
+        function openSaleModal(productCode = '', colorName = '') {
+            const modal = document.getElementById('saleModal');
+            const productSelect = document.getElementById('saleProduct');
+            
+            productSelect.innerHTML = '<option value="">Choose a product...</option>';
+            Object.values(inventory).forEach(product => {
+                Object.keys(product.colors).forEach(color => {
+                    const option = document.createElement('option');
+                    option.value = `${product.code}|${color}`;
+                    option.textContent = `${product.name} - ${color} ($${product.unitPrice})`;
+                    if (productCode === product.code && colorName === color) option.selected = true;
+                    productSelect.appendChild(option);
+                });
+            });
+            
+            document.getElementById('soldBy').value = currentUser;
+            
+            modal.classList.add('active');
+            if (productCode) updateProductOptions();
+        }
+
+        function closeModal() {
+            document.getElementById('saleModal').classList.remove('active');
+            document.getElementById('selectedColor').value = '';
+            document.getElementById('selectedSize').value = '';
+        }
+
+        function updateProductOptions() {
+            const selection = document.getElementById('saleProduct').value;
+            if (!selection) return;
+            
+            const [code, color] = selection.split('|');
+            const product = inventory[code];
+            const colorData = product.colors[color];
+            
+            document.getElementById('selectedColor').value = color;
+            document.getElementById('salePrice').value = '$' + product.unitPrice.toFixed(2);
+            
+            const colorDiv = document.getElementById('colorOptions');
+            colorDiv.innerHTML = Object.keys(product.colors).map(c => `
+                <div class="color-btn ${c === color ? 'active' : ''}" 
+                     style="background: ${c.toLowerCase()}; ${c === 'Beige' ? 'background: #e8d5b5;' : ''}"
+                     onclick="selectColor('${c}', '${code}')">
+                </div>
+            `).join('');
+            
+            const sizeDiv = document.getElementById('sizeOptions');
+            sizeDiv.innerHTML = [36,37,38,39,40,41,42,43].map(size => `
+                <button class="size-btn ${colorData[size] === 0 ? 'disabled' : ''}" 
+                        ${colorData[size] === 0 ? 'disabled' : ''}
+                        onclick="selectSize(${size}, this)">
+                    ${size}<br><small style="font-size: 0.65rem; opacity: 0.7;">${colorData[size]} left</small>
+                </button>
+            `).join('');
+        }
+
+        function selectColor(color, code) {
+            document.getElementById('saleProduct').value = `${code}|${color}`;
+            updateProductOptions();
+        }
+
+        function selectSize(size, btn) {
+            document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('selectedSize').value = size;
+        }
+
+        function processSale() {
+            const selection = document.getElementById('saleProduct').value;
+            const size = document.getElementById('selectedSize').value;
+            const customer = document.getElementById('customerName').value.trim();
+            const payment = document.getElementById('paymentMethod').value;
+            const seller = document.getElementById('soldBy').value;
+            const notes = document.getElementById('saleNotes').value.trim();
+            
+            if (!selection || !size || !customer) {
+                showToast('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            const [code, color] = selection.split('|');
+            const product = inventory[code];
+            
+            if (product.colors[color][size] <= 0) {
+                showToast('Sorry, this item is out of stock in this size', 'error');
+                return;
+            }
+            
+            const previousStock = product.colors[color][size];
+            product.colors[color][size]--;
+            
+            // Record stock movement
+            recordStockMovement({
+                type: 'sale',
+                productCode: code,
+                productName: product.name,
+                color: color,
+                size: parseInt(size),
+                quantity: -1,
+                previousStock: previousStock,
+                newStock: product.colors[color][size],
+                reason: `Sold to ${customer}`,
+                user: seller === 'admin' ? 'Admin' : seller === 'worker1' ? 'John' : seller === 'worker2' ? 'Sarah' : 'Mike',
+                customer: customer
+            });
+            
+            const sale = {
+                id: Date.now(),
+                date: new Date().toISOString(),
+                productCode: code,
+                productName: product.name,
+                color: color,
+                size: parseInt(size),
+                amount: product.unitPrice,
+                customer: customer,
+                payment: payment,
+                soldBy: seller,
+                soldByName: seller === 'admin' ? 'Admin' : seller === 'worker1' ? 'John' : seller === 'worker2' ? 'Sarah' : 'Mike',
+                notes: notes
+            };
+            
+            sales.push(sale);
+            localStorage.setItem('shoeShopSales', JSON.stringify(sales));
+            
+            closeModal();
+            updateDashboard();
+            renderProducts();
+            renderInventory();
+            renderSales();
+            
+            showToast(`Sale completed! ${product.name} Size ${size} sold to ${customer}`, 'success');
+            
+            document.getElementById('customerName').value = '';
+            document.getElementById('saleNotes').value = '';
+        }
+
+        // Stock Movement Functions
+        function recordStockMovement(movement) {
+            movement.id = Date.now() + Math.random();
+            movement.date = new Date().toISOString();
+            stockMovements.push(movement);
+            saveStockMovements();
+        }
+
+        function saveStockMovements() {
+            localStorage.setItem('shoeShopStockMovements', JSON.stringify(stockMovements));
+        }
+
+        // Inventory Functions
+        function renderInventory() {
+            const tbody = document.getElementById('inventoryBody');
+            tbody.innerHTML = '';
+            
+            Object.values(inventory).forEach(product => {
+                Object.entries(product.colors).forEach(([color, data]) => {
+                    const sizes = [36,37,38,39,40,41,42,43];
+                    const stockValues = sizes.map(s => data[s] || 0);
+                    const totalStock = stockValues.reduce((a, b) => a + b, 0);
+                    
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <img src="${data.image}" alt="" class="product-img">
+                                <div>
+                                    <div style="font-weight: 600;">${product.name}</div>
+                                    <div style="font-size: 0.875rem; color: var(--secondary);">${product.code}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${product.code}</td>
+                        <td>
+                            <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                                <span style="width: 16px; height: 16px; border-radius: 50%; background: ${color.toLowerCase()}; ${color === 'Beige' ? 'background: #e8d5b5;' : ''} border: 1px solid var(--border);"></span>
+                                ${color}
+                            </span>
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                ${sizes.map((s, i) => `
+                                    <div style="text-align: center; padding: 0.25rem 0.5rem; background: ${stockValues[i] > 5 ? '#d1fae5' : stockValues[i] > 0 ? '#fef3c7' : '#fee2e2'}; border-radius: 4px; font-size: 0.75rem;">
+                                        <div style="font-weight: 600;">${s}</div>
+                                        <div style="color: var(--secondary);">${stockValues[i]}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-weight: 700; font-size: 1.125rem;">${totalStock}</div>
+                            <div class="stock-bar" style="margin-top: 0.5rem;">
+                                <div class="stock-fill ${totalStock > 20 ? 'stock-high' : totalStock > 10 ? 'stock-medium' : 'stock-low'}" 
+                                     style="width: ${Math.min((totalStock / 45) * 100, 100)}%"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge ${totalStock > 20 ? 'badge-admin' : totalStock > 10 ? 'badge-worker' : 'badge-danger'}" 
+                                  style="background: ${totalStock > 20 ? 'var(--success)' : totalStock > 10 ? 'var(--warning)' : 'var(--danger)'}; color: white;">
+                                ${totalStock > 20 ? 'Good' : totalStock > 10 ? 'Low' : 'Critical'}
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-primary" onclick="openSaleModal('${product.code}', '${color}')" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                                <i class="fas fa-shopping-cart"></i> Sell
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+        }
+
+        // Stock Management Functions
+        function switchStockTab(tabId) {
+            document.querySelectorAll('.stock-tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.closest('.tab').classList.add('active');
+            
+            if (tabId === 'stock-history') {
+                renderStockHistory();
+            }
+        }
+
+        function loadProductForStock() {
+            const code = document.getElementById('stockProductCode').value;
+            const colorSelect = document.getElementById('stockColor');
+            
+            if (!code) {
+                colorSelect.innerHTML = '<option value="">Select color...</option>';
+                return;
+            }
+            
+            const product = inventory[code];
+            const colors = Object.keys(product.colors);
+            
+            colorSelect.innerHTML = '<option value="">Select color...</option>' +
+                colors.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+
+        function updateStockInputDisplay() {
+            const code = document.getElementById('stockProductCode').value;
+            const color = document.getElementById('stockColor').value;
+            const container = document.getElementById('stockSizeInputs');
+            
+            if (!code || !color) {
+                container.innerHTML = '<p style="color: var(--secondary); text-align: center;">Select product and color to enter quantities</p>';
+                return;
+            }
+            
+            container.innerHTML = [36,37,38,39,40,41,42,43].map(size => `
+                <div class="stock-input-card">
+                    <div class="size-stock-input">
+                        <span class="size-label">${size}</span>
+                        <input type="number" min="0" class="stock-number-input" 
+                               id="stockSize_${size}" value="0" 
+                               onchange="updateTotalStockBeingAdded()">
+                    </div>
+                    <div style="text-align: center; font-size: 0.875rem; color: var(--secondary);">
+                        Current: ${inventory[code].colors[color][size] || 0}
+                    </div>
+                </div>
+            `).join('');
+            
+            updateTotalStockBeingAdded();
+        }
+
+        function updateTotalStockBeingAdded() {
+            let total = 0;
+            [36,37,38,39,40,41,42,43].forEach(size => {
+                const input = document.getElementById(`stockSize_${size}`);
+                if (input) total += parseInt(input.value) || 0;
+            });
+            document.getElementById('totalStockBeingAdded').textContent = total;
+        }
+
+        function resetStockForm() {
+            document.getElementById('stockProductCode').value = '';
+            document.getElementById('stockColor').value = '';
+            document.getElementById('stockSupplier').value = '';
+            document.getElementById('stockInvoice').value = '';
+            document.getElementById('stockUnitCost').value = '';
+            document.getElementById('stockSizeInputs').innerHTML = '<p style="color: var(--secondary); text-align: center;">Select product and color to enter quantities</p>';
+            document.getElementById('totalStockBeingAdded').textContent = '0';
+        }
+
+        function processStockArrival() {
+            const code = document.getElementById('stockProductCode').value;
+            const color = document.getElementById('stockColor').value;
+            const supplier = document.getElementById('stockSupplier').value || 'Unknown';
+            const invoice = document.getElementById('stockInvoice').value || 'N/A';
+            const date = document.getElementById('stockDate').value;
+            const unitCost = document.getElementById('stockUnitCost').value;
+            
+            if (!code || !color) {
+                showToast('Please select product and color', 'error');
+                return;
+            }
+            
+            const product = inventory[code];
+            let totalAdded = 0;
+            
+            [36,37,38,39,40,41,42,43].forEach(size => {
+                const input = document.getElementById(`stockSize_${size}`);
+                const qty = parseInt(input.value) || 0;
+                if (qty > 0) {
+                    const previousStock = product.colors[color][size] || 0;
+                    product.colors[color][size] = previousStock + qty;
+                    totalAdded += qty;
+                    
+                    recordStockMovement({
+                        type: 'arrival',
+                        productCode: code,
+                        productName: product.name,
+                        color: color,
+                        size: size,
+                        quantity: qty,
+                        previousStock: previousStock,
+                        newStock: product.colors[color][size],
+                        reason: `New arrival - Invoice: ${invoice}`,
+                        user: document.getElementById('currentUserDisplay').textContent,
+                        supplier: supplier,
+                        unitCost: unitCost
+                    });
+                }
+            });
+            
+            if (totalAdded === 0) {
+                showToast('Please enter quantities for at least one size', 'error');
+                return;
+            }
+            
+            saveStockMovements();
+            resetStockForm();
+            updateDashboard();
+            renderProducts();
+            renderInventory();
+            
+            showToast(`Successfully added ${totalAdded} units of ${product.name} ${color}`, 'success');
+        }
+
+        // Adjustment Functions
+        function initializeAdjustmentSelects() {
+            const productSelect = document.getElementById('adjustProduct');
+            productSelect.innerHTML = '<option value="">Select product...</option>' +
+                Object.values(inventory).map(p => `<option value="${p.code}">${p.code} - ${p.name}</option>`).join('');
+        }
+
+        function selectAdjustmentType(type) {
+            currentAdjustmentType = type;
+            document.querySelectorAll('.adjustment-type-card').forEach(c => c.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        function loadAdjustProduct() {
+            const code = document.getElementById('adjustProduct').value;
+            const colorSelect = document.getElementById('adjustColor');
+            
+            if (!code) {
+                colorSelect.innerHTML = '<option value="">Select color...</option>';
+                return;
+            }
+            
+            const product = inventory[code];
+            colorSelect.innerHTML = '<option value="">Select color...</option>' +
+                Object.keys(product.colors).map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+
+        function loadAdjustSizes() {
+            const code = document.getElementById('adjustProduct').value;
+            const color = document.getElementById('adjustColor').value;
+            const container = document.getElementById('adjustSizeGrid');
+            
+            if (!code || !color) {
+                container.innerHTML = '<p style="color: var(--secondary);">Select product and color</p>';
+                return;
+            }
+            
+            const product = inventory[code];
+            const data = product.colors[color];
+            
+            container.innerHTML = [36,37,38,39,40,41,42,43].map(size => `
+                <div class="stock-input-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span class="size-label">${size}</span>
+                        <span style="font-size: 0.875rem; color: var(--secondary);">Current: ${data[size] || 0}</span>
+                    </div>
+                    <input type="number" class="form-control" id="adjustSize_${size}" 
+                           value="${data[size] || 0}" min="0" style="text-align: center; font-weight: 600;">
+                </div>
+            `).join('');
+        }
+
+        function resetAdjustForm() {
+            document.getElementById('adjustProduct').value = '';
+            document.getElementById('adjustColor').value = '';
+            document.getElementById('adjustReason').value = '';
+            document.getElementById('adjustSizeGrid').innerHTML = '<p style="color: var(--secondary);">Select product and color</p>';
+        }
+
+        function processAdjustment() {
+            const code = document.getElementById('adjustProduct').value;
+            const color = document.getElementById('adjustColor').value;
+            const reason = document.getElementById('adjustReason').value;
+            
+            if (!code || !color || !reason) {
+                showToast('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            const product = inventory[code];
+            let hasChanges = false;
+            
+            [36,37,38,39,40,41,42,43].forEach(size => {
+                const input = document.getElementById(`adjustSize_${size}`);
+                const newValue = parseInt(input.value) || 0;
+                const currentValue = product.colors[color][size] || 0;
+                
+                if (newValue !== currentValue) {
+                    const diff = newValue - currentValue;
+                    product.colors[color][size] = newValue;
+                    hasChanges = true;
+                    
+                    recordStockMovement({
+                        type: currentAdjustmentType,
+                        productCode: code,
+                        productName: product.name,
+                        color: color,
+                        size: size,
+                        quantity: diff,
+                        previousStock: currentValue,
+                        newStock: newValue,
+                        reason: reason,
+                        user: document.getElementById('currentUserDisplay').textContent
+                    });
+                }
+            });
+            
+            if (!hasChanges) {
+                showToast('No changes detected', 'error');
+                return;
+            }
+            
+            saveStockMovements();
+            resetAdjustForm();
+            updateDashboard();
+            renderProducts();
+            renderInventory();
+            renderStockHistory();
+            
+            showToast('Stock adjustment saved successfully', 'success');
+        }
+
+        // Stock History Functions
+        function renderStockHistory() {
+            const filterDate = document.getElementById('historyFilterDate').value;
+            const filterType = document.getElementById('historyFilterType').value;
+            
+            let filtered = stockMovements;
+            
+            if (filterDate) {
+                const filter = new Date(filterDate).toDateString();
+                filtered = filtered.filter(m => new Date(m.date).toDateString() === filter);
+            }
+            
+            if (filterType) {
+                filtered = filtered.filter(m => m.type === filterType);
+            }
+            
+            // Sort by date descending
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            const tbody = document.getElementById('stockHistoryBody');
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 3rem; color: var(--secondary);">No stock movements found</td></tr>';
+            } else {
+                tbody.innerHTML = filtered.slice(0, 50).map(m => `
+                    <tr>
+                        <td>${new Date(m.date).toLocaleString()}</td>
+                        <td>
+                            <span class="adjustment-reason reason-${m.type}">
+                                <i class="fas fa-${getMovementIcon(m.type)}"></i>
+                                ${m.type.charAt(0).toUpperCase() + m.type.slice(1)}
+                            </span>
+                        </td>
+                        <td>${m.productName}<br><small style="color: var(--secondary);">${m.productCode}</small></td>
+                        <td>
+                            <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                                <span style="width: 12px; height: 12px; border-radius: 50%; background: ${m.color.toLowerCase()}; ${m.color === 'Beige' ? 'background: #e8d5b5;' : ''} border: 1px solid var(--border);"></span>
+                                ${m.color}
+                            </span>
+                        </td>
+                        <td>${m.size}</td>
+                        <td style="font-weight: 600; color: ${m.quantity > 0 ? 'var(--success)' : 'var(--danger)'};">
+                            ${m.quantity > 0 ? '+' : ''}${m.quantity}
+                        </td>
+                        <td>${m.reason}</td>
+                        <td>${m.user}</td>
+                    </tr>
+                `).join('');
+            }
+            
+            // Render timeline
+            const timelineDiv = document.getElementById('stockTimeline');
+            const recentMovements = filtered.slice(0, 10);
+            
+            if (recentMovements.length === 0) {
+                timelineDiv.innerHTML = '<p style="color: var(--secondary); text-align: center;">No recent activity</p>';
+            } else {
+                timelineDiv.innerHTML = recentMovements.map(m => `
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <div class="timeline-date">${new Date(m.date).toLocaleString()}</div>
+                            <div class="timeline-title">
+                                ${m.type === 'sale' ? 'Sale' : m.type === 'arrival' ? 'New Stock Arrival' : 'Stock Adjustment'} - 
+                                ${m.productName} ${m.color} Size ${m.size}
+                            </div>
+                            <div class="timeline-meta">
+                                <span style="color: ${m.quantity > 0 ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">
+                                    ${m.quantity > 0 ? '+' : ''}${m.quantity} units
+                                </span> • 
+                                By ${m.user} • 
+                                ${m.reason}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function getMovementIcon(type) {
+            const icons = {
+                'arrival': 'truck',
+                'restock': 'plus-circle',
+                'sale': 'shopping-cart',
+                'adjustment': 'edit',
+                'damage': 'trash-alt',
+                'correction': 'balance-scale'
+            };
+            return icons[type] || 'circle';
+        }
+
+        // CSV Upload Functions
+        function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                const rows = text.split('\n').filter(r => r.trim());
+                const headers = rows[0].split(',');
+                
+                // Simple validation
+                if (rows.length < 2) {
+                    showToast('CSV file appears to be empty', 'error');
+                    return;
+                }
+                
+                // Preview first 5 rows
+                const previewBody = document.getElementById('csvPreviewBody');
+                previewBody.innerHTML = '';
+                
+                for (let i = 1; i < Math.min(rows.length, 6); i++) {
+                    const cols = rows[i].split(',');
+                    if (cols.length >= 10) {
+                        const totalQty = cols.slice(2, 10).reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${cols[0]} - ${inventory[cols[0]]?.name || 'Unknown'}</td>
+                            <td>${cols[1]}</td>
+                            <td>${totalQty}</td>
+                            <td>${cols[10] || 'N/A'}</td>
+                            <td><span class="badge badge-success">Ready</span></td>
+                        `;
+                        previewBody.appendChild(row);
+                    }
+                }
+                
+                document.getElementById('csvPreview').style.display = 'block';
+                window.csvData = rows.slice(1);
+            };
+            reader.readAsText(file);
+        }
+
+        function cancelCSVUpload() {
+            document.getElementById('csvFile').value = '';
+            document.getElementById('csvPreview').style.display = 'none';
+            window.csvData = null;
+        }
+
+        function processCSVUpload() {
+            if (!window.csvData) return;
+            
+            let processed = 0;
+            
+            window.csvData.forEach(row => {
+                const cols = row.split(',');
+                if (cols.length < 10) return;
+                
+                const code = cols[0];
+                const color = cols[1];
+                const supplier = cols[10] || 'Unknown';
+                const invoice = cols[11] || 'N/A';
+                
+                if (!inventory[code] || !inventory[code].colors[color]) return;
+                
+                [36,37,38,39,40,41,42,43].forEach((size, idx) => {
+                    const qty = parseInt(cols[idx + 2]) || 0;
+                    if (qty > 0) {
+                        const previousStock = inventory[code].colors[color][size] || 0;
+                        inventory[code].colors[color][size] = previousStock + qty;
+                        processed++;
+                        
+                        recordStockMovement({
+                            type: 'arrival',
+                            productCode: code,
+                            productName: inventory[code].name,
+                            color: color,
+                            size: size,
+                            quantity: qty,
+                            previousStock: previousStock,
+                            newStock: inventory[code].colors[color][size],
+                            reason: `Bulk upload - Invoice: ${invoice}`,
+                            user: document.getElementById('currentUserDisplay').textContent,
+                            supplier: supplier
+                        });
+                    }
+                });
+            });
+            
+            saveStockMovements();
+            cancelCSVUpload();
+            updateDashboard();
+            renderProducts();
+            renderInventory();
+            
+            showToast(`Successfully processed ${processed} stock entries`, 'success');
+        }
+
+        // Quick Adjustment Modal
+        function openAdjustmentModal() {
+            document.getElementById('adjustmentModal').classList.add('active');
+            const select = document.getElementById('quickAdjustProduct');
+            select.innerHTML = '<option value="">Select...</option>' +
+                Object.values(inventory).map(p => `<option value="${p.code}">${p.code} - ${p.name}</option>`).join('');
+        }
+
+        function closeAdjustmentModal() {
+            document.getElementById('adjustmentModal').classList.remove('active');
+        }
+
+        function populateQuickAdjustColors() {
+            const code = document.getElementById('quickAdjustProduct').value;
+            const colorSelect = document.getElementById('quickAdjustColor');
+            
+            if (!code) {
+                colorSelect.innerHTML = '<option value="">Select...</option>';
+                return;
+            }
+            
+            const product = inventory[code];
+            colorSelect.innerHTML = '<option value="">Select...</option>' +
+                Object.keys(product.colors).map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+
+        function goToAdjustment() {
+            const code = document.getElementById('quickAdjustProduct').value;
+            const color = document.getElementById('quickAdjustColor').value;
+            
+            if (!code || !color) {
+                showToast('Please select product and color', 'error');
+                return;
+            }
+            
+            closeAdjustmentModal();
+            showSection('stock-management');
+            
+            // Switch to adjust tab
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab')[1].classList.add('active');
+            document.querySelectorAll('.stock-tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById('adjust-stock').classList.remove('hidden');
+            
+            // Pre-fill
+            document.getElementById('adjustProduct').value = code;
+            loadAdjustProduct();
+            document.getElementById('adjustColor').value = color;
+            loadAdjustSizes();
+        }
+
+        // Sales History Functions
+        function renderSales() {
+            const tbody = document.getElementById('salesBody');
+            const filterDate = document.getElementById('salesFilterDate').value;
+            
+            let filteredSales = sales;
+            if (filterDate) {
+                const filter = new Date(filterDate).toDateString();
+                filteredSales = sales.filter(s => new Date(s.date).toDateString() === filter);
+            }
+            
+            if (filteredSales.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 3rem; color: var(--secondary);">No sales records found</td></tr>';
+                document.getElementById('salesSummary').innerHTML = '';
+                return;
+            }
+            
+            tbody.innerHTML = filteredSales.sort((a, b) => new Date(b.date) - new Date(a.date)).map(sale => `
+                <tr>
+                    <td>${new Date(sale.date).toLocaleString()}</td>
+                    <td>
+                        <div style="font-weight: 600;">${sale.productName}</div>
+                        <div style="font-size: 0.875rem; color: var(--secondary);">${sale.productCode}</div>
+                    </td>
+                    <td>${sale.size}</td>
+                    <td>
+                        <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <span style="width: 12px; height: 12px; border-radius: 50%; background: ${sale.color.toLowerCase()}; ${sale.color === 'Beige' ? 'background: #e8d5b5;' : ''} border: 1px solid var(--border);"></span>
+                            ${sale.color}
+                        </span>
+                    </td>
+                    <td><span class="badge badge-worker">${sale.soldByName}</span></td>
+                    <td>${sale.customer}</td>
+                    <td>
+                        <span style="text-transform: capitalize; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-${sale.payment === 'cash' ? 'money-bill' : sale.payment === 'card' ? 'credit-card' : sale.payment === 'mobile' ? 'mobile-alt' : 'university'}"></i>
+                            ${sale.payment}
+                        </span>
+                    </td>
+                    <td style="font-weight: 700; color: var(--success);">$${sale.amount.toFixed(2)}</td>
+                    <td>
+                        ${currentRole === 'admin' ? `
+                            <button class="btn btn-danger" onclick="deleteSale(${sale.id})" style="padding: 0.5rem;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        ` : '-'}
+                    </td>
+                </tr>
+            `).join('');
+            
+            const totalAmount = filteredSales.reduce((sum, s) => sum + s.amount, 0);
+            const byPayment = {};
+            filteredSales.forEach(s => {
+                byPayment[s.payment] = (byPayment[s.payment] || 0) + s.amount;
+            });
+            
+            document.getElementById('salesSummary').innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                    <div>
+                        <div style="font-size: 0.875rem; color: var(--secondary); margin-bottom: 0.25rem;">Total Sales</div>
+                        <div style="font-size: 1.5rem; font-weight: 700;">${filteredSales.length} transactions</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.875rem; color: var(--secondary); margin-bottom: 0.25rem;">Total Revenue</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--success);">$${totalAmount.toFixed(2)}</div>
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        ${Object.entries(byPayment).map(([method, amount]) => `
+                            <div style="text-align: center; padding: 0.5rem 1rem; background: white; border-radius: 8px;">
+                                <div style="font-size: 0.75rem; color: var(--secondary); text-transform: capitalize;">${method}</div>
+                                <div style="font-weight: 600;">$${amount.toFixed(2)}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function filterSales() {
+            renderSales();
+        }
+
+        function deleteSale(id) {
+            if (!confirm('Are you sure you want to delete this sale record? This will restore the stock.')) return;
+            
+            const sale = sales.find(s => s.id === id);
+            if (sale) {
+                inventory[sale.productCode].colors[sale.color][sale.size]++;
+                
+                recordStockMovement({
+                    type: 'adjustment',
+                    productCode: sale.productCode,
+                    productName: sale.productName,
+                    color: sale.color,
+                    size: sale.size,
+                    quantity: 1,
+                    previousStock: inventory[sale.productCode].colors[sale.color][sale.size] - 1,
+                    newStock: inventory[sale.productCode].colors[sale.color][sale.size],
+                    reason: `Sale deletion - Restored from sale #${id}`,
+                    user: document.getElementById('currentUserDisplay').textContent
+                });
+            }
+            
+            sales = sales.filter(s => s.id !== id);
+            localStorage.setItem('shoeShopSales', JSON.stringify(sales));
+            
+            updateDashboard();
+            renderProducts();
+            renderInventory();
+            renderSales();
+            showToast('Sale deleted and stock restored', 'success');
+        }
+
+        // Analytics Functions
+        function updateAnalytics() {
+            if (sales.length === 0) {
+                document.getElementById('topProduct').textContent = '-';
+                document.getElementById('topSize').textContent = '-';
+                document.getElementById('topColor').textContent = '-';
+                document.getElementById('topWorker').textContent = '-';
+                document.getElementById('sizeAnalytics').innerHTML = '<p style="text-align: center; color: var(--secondary);">No data available</p>';
+                return;
+            }
+            
+            const productCount = {};
+            sales.forEach(s => {
+                productCount[s.productName] = (productCount[s.productName] || 0) + 1;
+            });
+            const topProduct = Object.entries(productCount).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById('topProduct').textContent = topProduct ? topProduct[0] : '-';
+            
+            const sizeCount = {};
+            sales.forEach(s => {
+                sizeCount[s.size] = (sizeCount[s.size] || 0) + 1;
+            });
+            const topSize = Object.entries(sizeCount).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById('topSize').textContent = topSize ? `Size ${topSize[0]} (${topSize[1]} sales)` : '-';
+            
+            const colorCount = {};
+            sales.forEach(s => {
+                colorCount[s.color] = (colorCount[s.color] || 0) + 1;
+            });
+            const topColor = Object.entries(colorCount).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById('topColor').textContent = topColor ? `${topColor[0]} (${topColor[1]} sales)` : '-';
+            
+            const workerCount = {};
+            sales.forEach(s => {
+                workerCount[s.soldByName] = (workerCount[s.soldByName] || 0) + 1;
+            });
+            const topWorker = Object.entries(workerCount).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById('topWorker').textContent = topWorker ? `${topWorker[0]} (${topWorker[1]} sales)` : '-';
+            
+            const sizeDiv = document.getElementById('sizeAnalytics');
+            const maxCount = Math.max(...Object.values(sizeCount));
+            sizeDiv.innerHTML = [36,37,38,39,40,41,42,43].map(size => {
+                const count = sizeCount[size] || 0;
+                const percentage = (count / (maxCount || 1)) * 100;
+                return `
+                    <div style="margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                            <span style="font-weight: 500;">Size ${size}</span>
+                            <span style="color: var(--secondary);">${count} sold</span>
+                        </div>
+                        <div style="height: 8px; background: var(--border); border-radius: 4px; overflow: hidden;">
+                            <div style="height: 100%; width: ${percentage}%; background: var(--primary); border-radius: 4px; transition: width 0.5s;"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Export Functions
+        function exportInventory() {
+            let csv = 'Product,Code,Color,Size 36,Size 37,Size 38,Size 39,Size 40,Size 41,Size 42,Size 43,Total\n';
+            
+            Object.values(inventory).forEach(product => {
+                Object.entries(product.colors).forEach(([color, data]) => {
+                    const sizes = [36,37,38,39,40,41,42,43].map(s => data[s] || 0);
+                    const total = sizes.reduce((a, b) => a + b, 0);
+                    csv += `"${product.name}",${product.code},${color},${sizes.join(',')},${total}\n`;
+                });
+            });
+            
+            downloadCSV(csv, 'inventory-export-' + new Date().toISOString().split('T')[0] + '.csv');
+        }
+
+        function exportSales() {
+            if (sales.length === 0) {
+                showToast('No sales to export', 'error');
+                return;
+            }
+            
+            let csv = 'Date,Product,Code,Color,Size,Customer,Sold By,Payment Method,Amount,Notes\n';
+            sales.forEach(s => {
+                csv += `${s.date},"${s.productName}",${s.productCode},${s.color},${s.size},${s.customer},${s.soldByName},${s.payment},${s.amount},"${s.notes || ''}"\n`;
+            });
+            
+            downloadCSV(csv, `sales-export-${new Date().toISOString().split('T')[0]}.csv`);
+        }
+
+        function downloadCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            showToast('Export completed!', 'success');
+        }
+
+        // Utility Functions
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toast.className = `toast ${type} show`;
+            toastMessage.textContent = message;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Close modals on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>
