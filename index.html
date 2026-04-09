@@ -488,11 +488,17 @@ tr:hover td{background:rgba(255,255,255,0.015);}
       <div class="frow">
         <div class="fld"><label>Selling Price ($) *</label><input type="number" id="pm-price" placeholder="0.00" step="0.01" min="0"></div>
         <div class="fld"><label>Type</label>
-          <select id="pm-type">
+          <select id="pm-type" onchange="renderSizePicker(this.value)">
             <option value="shoes">Shoes (sizes 36–48)</option>
             <option value="clothing">Clothing (XS–5XL)</option>
           </select>
         </div>
+      </div>
+      <div class="dvd"></div>
+      <div style="margin-bottom:1rem;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.9rem;margin-bottom:0.5rem;">Active Sizes <span style="font-weight:400;color:var(--muted);font-size:0.78rem;font-family:'DM Sans',sans-serif;">— select only the sizes this product comes in</span></div>
+        <div id="pm-sizes-wrap" style="display:flex;flex-wrap:wrap;gap:0.4rem;"></div>
+        <input type="hidden" id="pm-type-mirror" value="shoes">
       </div>
       <div class="dvd"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
@@ -800,7 +806,7 @@ function updateStats(){
   Object.values(inventory).forEach(p=>{
     const sz=p.type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
     Object.values(p.colors||{}).forEach(c=>{
-      sz.forEach(s=>{const q=c[s]||0;tu+=q;if(q===0)to++;else if(q<=3)tl++;});
+      sz.forEach(s=>{const q=c[s]||0;tu+=q;const wasStocked=(c[s]!==undefined&&c[s]>0)||(p.activeSizes&&p.activeSizes.includes(String(s)));if(wasStocked&&q===0)to++;else if(wasStocked&&q>0&&q<=3)tl++;});
     });
   });
   const today=new Date().toDateString();
@@ -833,8 +839,24 @@ function renderLowStock(){
   Object.values(inventory).forEach(p=>{
     const sz=p.type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
     Object.entries(p.colors||{}).forEach(([c,d])=>{
-      sz.forEach(s=>{const q=d[s]||0;if(q<=3)alerts.push({name:p.name,code:p.code,color:c,size:s,qty:q});});
+      sz.forEach(s=>{
+        const q=d[s]||0;
+        // Only alert on sizes that were actually stocked (had qty > 0 at some point)
+        // A size with undefined or 0 that was never touched is not a real alert
+        const wasStocked = (p.activeSizes && p.activeSizes.includes(String(s))) || (d[s] !== undefined && d[s] > 0);
+        if(wasStocked && q<=3) alerts.push({name:p.name,code:p.code,color:c,size:s,qty:q});
+        // Also catch sizes that were sold down to 0 (they appear in sales)
+      });
     });
+  });
+  // Also add sizes sold to 0 (were stocked, now empty via sales)
+  sales.forEach(s=>{
+    const p=inventory[s.productCode]; if(!p) return;
+    const d=p.colors?.[s.color]; if(!d) return;
+    const q=d[s.size]||0;
+    if(q===0 && !alerts.find(a=>a.code===s.productCode&&a.color===s.color&&a.size===s.size)){
+      alerts.push({name:p.name,code:s.productCode,color:s.color,size:s.size,qty:0});
+    }
   });
   if (!alerts.length){el.innerHTML='<div class="empty"><i class="fas fa-check-circle" style="color:var(--success);opacity:0.8;"></i><p style="color:var(--success);">All stock levels healthy</p></div>';return;}
   el.innerHTML=alerts.slice(0,12).map(a=>`
@@ -848,6 +870,9 @@ function renderLowStock(){
 }
 
 // ===== PRODUCT GRID =====
+// Track active color tab per product card
+const cardActiveColor = {};
+
 function renderProductGrid(){
   const grid=E('productGrid');
   const q=(E('stockSearch')?.value||'').toLowerCase();
@@ -855,34 +880,54 @@ function renderProductGrid(){
   if (!prods.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1;"><i class="fas fa-box-open"></i><p>${q?'No results':'No products yet. Add your first product!'}</p></div>`;return;}
   grid.innerHTML=prods.map(p=>{
     const sz=p.type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
-    return Object.entries(p.colors||{}).map(([color,data])=>{
-      const total=sz.reduce((a,s)=>a+(data[s]||0),0);
-      const img=data.image||'';
-      const sc=total===0?'b-red':total<=5?'b-yellow':'b-green';
-      const sl=total===0?'Out of stock':total<=5?`Low: ${total}`:`${total} units`;
-      const sample=sz.slice(0,7);
-      return `<div class="product-card" onclick="openViewModal('${p.code}','${color}')">
-        ${img?`<img class="product-img" src="${img}" alt="${p.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">`:``}
-        <div class="product-img-ph" style="${img?'display:none;':''}"><i class="fas fa-shoe-prints"></i></div>
-        <div class="product-info">
-          <div class="product-code">${p.code}</div>
-          <div class="product-name">${p.name}</div>
-          <div class="product-color-row">
-            <span class="cdot" style="background:${CHEX[color]||'#888'};"></span>
-            <span style="font-size:0.78rem;color:var(--muted);">${color}</span>
-            <span class="badge ${sc}" style="margin-left:auto;font-size:0.62rem;">${sl}</span>
-          </div>
-          <div class="stock-pills">
-            ${sample.map(s=>{const q=data[s]||0;return `<span class="spill ${q===0?'sp-out':q<=3?'sp-low':'sp-ok'}">${s}:${q}</span>`;}).join('')}
-          </div>
+    const colors=Object.entries(p.colors||{});
+    if(!colors.length) return '';
+    // Use persisted active color or default to first
+    if(!cardActiveColor[p.code]) cardActiveColor[p.code]=colors[0][0];
+    const activeColor=cardActiveColor[p.code];
+    const activeData=p.colors[activeColor]||{};
+    const activeImg=activeData.image||'';
+    const activeTotal=sz.reduce((a,s)=>a+(activeData[s]||0),0);
+    const sc=activeTotal===0?'b-red':activeTotal<=5?'b-yellow':'b-green';
+    const sl=activeTotal===0?'Out of stock':activeTotal<=5?`Low: ${activeTotal}`:`${activeTotal} units`;
+    const totalAll=colors.reduce((a,[c,d])=>a+sz.reduce((b,s)=>b+(d[s]||0),0),0);
+    return `<div class="product-card" onclick="openViewModal('${p.code}','${activeColor}')">
+      ${activeImg?`<img class="product-img" src="${activeImg}" alt="${p.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">`:``}
+      <div class="product-img-ph" style="${activeImg?'display:none;':''}"><i class="fas fa-shoe-prints"></i></div>
+      <div class="product-info">
+        <div class="product-code" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>${p.code}</span>
+          <span style="font-size:0.65rem;color:var(--muted);">${totalAll} total units</span>
         </div>
-        <div class="product-actions">
-          <button class="btn btn-sell" onclick="event.stopPropagation();openSellModal('${p.code}','${color}')"><i class="fas fa-tag"></i> Sell</button>
-          ${currentRole==='admin'?`<button class="btn btn-ghost" onclick="event.stopPropagation();openAddStockModal('${p.code}','${color}')"><i class="fas fa-plus"></i> Stock</button>`:''}
+        <div class="product-name">${p.name}</div>
+        <div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.6rem;" id="colortabs-${p.code}">
+          ${colors.map(([c,d])=>{
+            const ct=sz.reduce((a,s)=>a+(d[s]||0),0);
+            const isActive=c===activeColor;
+            return `<button onclick="event.stopPropagation();switchCardColor('${p.code}','${c}')" style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.22rem 0.55rem;border-radius:6px;border:1px solid ${isActive?'var(--accent)':'var(--border)'};background:${isActive?'rgba(232,255,71,0.1)':'transparent'};cursor:pointer;font-size:0.7rem;font-weight:600;color:${isActive?'var(--accent)':'var(--muted)'};transition:all 0.15s;">
+              <span style="width:8px;height:8px;border-radius:50%;background:${CHEX[c]||'#888'};flex-shrink:0;"></span>${c}
+              <span style="font-size:0.6rem;opacity:0.7;">${ct}</span>
+            </button>`;
+          }).join('')}
         </div>
-      </div>`;
-    }).join('');
+        <div class="product-color-row">
+          <span class="badge ${sc}" style="font-size:0.62rem;">${sl}</span>
+        </div>
+        <div class="stock-pills" id="pills-${p.code}">
+          ${sz.map(s=>{const q=activeData[s]||0;if(q===0&&activeData[s]===undefined)return'';return `<span class="spill ${q===0?'sp-out':q<=3?'sp-low':'sp-ok'}">${s}:${q}</span>`;}).join('')}
+        </div>
+      </div>
+      <div class="product-actions">
+        <button class="btn btn-sell" onclick="event.stopPropagation();openSellModal('${p.code}','${activeColor}')"><i class="fas fa-tag"></i> Sell</button>
+        ${currentRole==='admin'||currentRole==='manager'?`<button class="btn btn-ghost" onclick="event.stopPropagation();openAddStockModal('${p.code}','${activeColor}')"><i class="fas fa-plus"></i> Stock</button>`:''}
+      </div>
+    </div>`;
   }).join('');
+}
+
+function switchCardColor(code, color){
+  cardActiveColor[code]=color;
+  renderProductGrid();
 }
 
 // ===== VIEW MODAL =====
@@ -919,6 +964,34 @@ function openViewModal(code,color){
   openModal('viewModal');
 }
 
+// ===== SIZE PICKER =====
+function renderSizePicker(type, selectedSizes){
+  const sz=type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
+  const wrap=E('pm-sizes-wrap'); if(!wrap) return;
+  // selectedSizes: array of strings, or null = select all
+  const sel=selectedSizes?selectedSizes.map(String):sz.map(String);
+  wrap.innerHTML=sz.map(s=>{
+    const active=sel.includes(String(s));
+    return `<button type="button" onclick="toggleSize(this,'${s}')"
+      data-size="${s}"
+      style="padding:0.5rem 0.7rem;border-radius:8px;border:1px solid ${active?'var(--accent)':'var(--border)'};background:${active?'rgba(232,255,71,0.12)':'transparent'};color:${active?'var(--accent)':'var(--muted)'};cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;font-size:0.8rem;transition:all 0.15s;" data-active="${active}">${s}</button>`;
+  }).join('');
+}
+
+function toggleSize(btn, size){
+  const active=btn.getAttribute('data-active')==='true';
+  const newState=!active;
+  btn.setAttribute('data-active', newState);
+  btn.style.border=newState?'1px solid var(--accent)':'1px solid var(--border)';
+  btn.style.background=newState?'rgba(232,255,71,0.12)':'transparent';
+  btn.style.color=newState?'var(--accent)':'var(--muted)';
+}
+
+function getSelectedSizes(){
+  const btns=document.querySelectorAll('#pm-sizes-wrap button');
+  return [...btns].filter(b=>b.getAttribute('data-active')==='true').map(b=>b.getAttribute('data-size'));
+}
+
 // ===== ADD/EDIT PRODUCT =====
 function openAddProductModal(){
   editingCode=null;
@@ -926,7 +999,9 @@ function openAddProductModal(){
   E('pm-code').value=''; E('pm-code').disabled=false;
   E('pm-name').value=''; E('pm-price').value=''; E('pm-type').value='shoes';
   E('colorEntriesContainer').innerHTML='';
-  colorEntryCount=0; addColorEntry();
+  colorEntryCount=0;
+  renderSizePicker('shoes', []);
+  addColorEntry();
   openModal('productModal');
 }
 
@@ -938,6 +1013,17 @@ function openEditProductModal(code){
   E('pm-name').value=p.name; E('pm-price').value=p.unitPrice||''; E('pm-type').value=p.type||'shoes';
   E('colorEntriesContainer').innerHTML='';
   colorEntryCount=0;
+  // Restore active sizes: prefer saved activeSizes, else infer from stocked sizes
+  const type=p.type||'shoes';
+  const sz=type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
+  let savedSizes=p.activeSizes||null;
+  if(!savedSizes){
+    // Infer from any color that has stock > 0
+    const stocked=new Set();
+    Object.values(p.colors||{}).forEach(d=>sz.forEach(s=>{if(d[s]>0)stocked.add(String(s));}));
+    savedSizes=stocked.size?[...stocked]:null;
+  }
+  renderSizePicker(type, savedSizes);
   Object.entries(p.colors||{}).forEach(([c,d])=>addColorEntry(c,d.image||''));
   openModal('productModal');
 }
@@ -981,6 +1067,8 @@ async function saveProduct(){
   if (!editingCode&&inventory[code]){toast(`Code ${code} already exists`,'err');return;}
   const entries=document.querySelectorAll('.color-entry');
   if (!entries.length){toast('Add at least one color','err');return;}
+  const activeSizes=getSelectedSizes();
+  if(!activeSizes.length){toast('Select at least one size','err');return;}
   document.getElementById('loadingScreen').style.display='flex';
   const sz=type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
   const colors=editingCode?{...(inventory[editingCode].colors||{})}:{};
@@ -993,10 +1081,11 @@ async function saveProduct(){
     if (fi.files[0]){try{imageUrl=await uploadImage(fi.files[0]);}catch(e){console.warn(e);}}
     const existData=colors[colorName]||{};
     const sd={};
-    sz.forEach(s=>{sd[s]=existData[s]||0;});
+    // Only store the sizes that are active for this product
+    activeSizes.forEach(s=>{sd[s]=existData[s]||0;});
     colors[colorName]={...sd,image:imageUrl};
   }
-  db.ref(`inventory/${code}`).set({code,name,type,unitPrice:price,colors})
+  db.ref(`inventory/${code}`).set({code,name,type,unitPrice:price,activeSizes,colors})
     .then(()=>{document.getElementById('loadingScreen').style.display='none';closeModal('productModal');toast(`${name} saved!`,'ok');})
     .catch(e=>{document.getElementById('loadingScreen').style.display='none';toast('Error: '+e.message,'err');});
 }
@@ -1014,7 +1103,9 @@ function openAddStockModal(code,color){
   E('addStockMeta').textContent=`${p.code} · ${color}`;
   E('as-supplier').value=''; E('as-invoice').value='';
   E('addStockTotal').textContent='0';
-  E('addStockSizes').innerHTML=sz.map(s=>`
+  // Only show sizes active for this product
+  const activeSz = p.activeSizes ? p.activeSizes.map(String) : sz.map(String);
+  E('addStockSizes').innerHTML=activeSz.map(s=>`
     <div class="asz">
       <span>${s}<br><span style="color:var(--accent);font-weight:600;">${data[s]||0}</span></span>
       <input type="number" min="0" value="0" id="as-${s}" oninput="calcASTotal()">
@@ -1025,7 +1116,8 @@ function openAddStockModal(code,color){
 function calcASTotal(){
   const p=inventory[addStockCtx.code]; if (!p) return;
   const sz=p.type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
-  E('addStockTotal').textContent=sz.reduce((a,s)=>a+(parseInt(E(`as-${s}`)?.value)||0),0);
+  const activeSz=p.activeSizes?p.activeSizes.map(String):sz.map(String);
+  E('addStockTotal').textContent=activeSz.reduce((a,s)=>a+(parseInt(E(`as-${s}`)?.value)||0),0);
 }
 
 function saveAddStock(){
@@ -1033,8 +1125,9 @@ function saveAddStock(){
   const {code,color}=addStockCtx;
   const p=inventory[code]; if (!p) return;
   const sz=p.type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
+  const activeSz=p.activeSizes?p.activeSizes.map(String):sz.map(String);
   const updates={};let total=0;
-  sz.forEach(s=>{
+  activeSz.forEach(s=>{
     const q=parseInt(E(`as-${s}`)?.value)||0;
     if (q>0){updates[`inventory/${code}/colors/${color}/${s}`]=(p.colors[color]?.[s]||0)+q;total+=q;}
   });
@@ -1062,7 +1155,8 @@ function openSellModal(code,color){
       </div>
       <div style="color:var(--accent);font-weight:700;margin-top:0.2rem;">$${(p.unitPrice||0).toFixed(2)}</div>
     </div>`;
-  E('sellSizeGrid').innerHTML=sz.map(s=>{const q=data[s]||0;return `<button class="ssz" ${q===0?'disabled':''} onclick="pickSize('${s}',this)">${s}<small>${q} left</small></button>`;}).join('');
+  const activeSz=p.activeSizes?p.activeSizes.map(String):sz.map(String);
+  E('sellSizeGrid').innerHTML=activeSz.map(s=>{const q=data[s]||0;return `<button class="ssz" ${q===0?'disabled':''} onclick="pickSize('${s}',this)">${s}<small>${q} left</small></button>`;}).join('');
   openModal('sellModal');
 }
 
@@ -1103,7 +1197,8 @@ function renderStockTable(){
   let rowNo = 0;
   prods.forEach(p => {
     rowNo++;
-    const sz = p.type==='clothing' ? CLOTH_SIZES : SHOE_SIZES;
+    const allSz = p.type==='clothing' ? CLOTH_SIZES : SHOE_SIZES;
+    const sz = p.activeSizes ? p.activeSizes.map(String) : allSz;
     const colors = Object.entries(p.colors||{});
     const grandTotal = colors.reduce((a,[c,d])=>a+sz.reduce((b,s)=>b+(d[s]||0),0),0);
     const firstImg = colors[0]?.[1]?.image||'';
@@ -1151,7 +1246,7 @@ function renderStockTable(){
         <td>${img?`<img src="${img}" class="sst-img" style="width:38px;height:38px;">`:`<div class="sst-img-ph" style="width:38px;height:38px;font-size:0.75rem;"><i class="fas fa-image"></i></div>`}</td>
         ${sz.map(s=>{
           const q=data[s]||0;
-          const qcls=q===0?'q-out':q<=3?'q-low':'q-ok';
+          const wasStk=(data[s]!==undefined&&data[s]>0);const qcls=wasStk?(q===0?'q-out':q<=3?'q-low':'q-ok'):(q>0?(q<=3?'q-low':'q-ok'):'');
           return `<td class="qty-cell" title="Click to record 1 sold" onclick="quickSell('${p.code}','${color}','${s}',this)">
             <span class="qty-val ${qcls}" id="qv-${p.code}-${color}-${s}">${q}</span>
           </td>`;
@@ -1328,3 +1423,4 @@ function confirmDelete(msg,fn,title){
 </script>
 </body>
 </html>
+
