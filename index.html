@@ -6,9 +6,7 @@
 <title>LETAX — Stock Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
 <style>
 :root{--bg:#0f0f0f;--surface:#181818;--surface2:#222;--border:#2a2a2a;--accent:#e8ff47;--accent2:#ff6b35;--text:#f0f0f0;--muted:#666;--success:#4ade80;--danger:#f87171;--warning:#fbbf24;--radius:12px;}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -215,6 +213,34 @@ tr:hover td{background:rgba(255,255,255,0.015);}
 .mnb{flex:1;padding:0.55rem 0.2rem;background:none;border:none;color:var(--muted);cursor:pointer;border-radius:8px;font-size:0.58rem;display:flex;flex-direction:column;align-items:center;gap:0.2rem;transition:all 0.2s;}
 .mnb i{font-size:1rem;}
 .mnb.active{color:var(--accent);}
+
+/* STOCK SPREADSHEET TABLE */
+.sst-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.sst{border-collapse:collapse;width:100%;min-width:700px;}
+.sst th{background:var(--surface2);padding:0.55rem 0.6rem;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);border:1px solid var(--border);text-align:center;font-family:'Syne',sans-serif;white-space:nowrap;}
+.sst td{padding:0.45rem 0.55rem;border:1px solid var(--border);text-align:center;font-size:0.82rem;vertical-align:middle;}
+.sst td.td-left{text-align:left;}
+.sst .sst-code{font-family:'Syne',sans-serif;font-weight:800;font-size:0.78rem;color:var(--accent);white-space:nowrap;}
+.sst .sst-color{font-weight:600;font-size:0.8rem;white-space:nowrap;}
+.sst .qty-cell{position:relative;cursor:pointer;min-width:38px;}
+.sst .qty-cell:hover{background:rgba(232,255,71,0.07);}
+.sst .qty-val{font-weight:700;font-size:0.85rem;}
+.qty-val.q-out{color:var(--danger);}
+.qty-val.q-low{color:var(--warning);}
+.qty-val.q-ok{color:var(--success);}
+.sst .tot-cell{font-family:'Syne',sans-serif;font-weight:800;font-size:0.9rem;color:var(--accent);background:rgba(232,255,71,0.04);}
+.sst .grand-tot{font-family:'Syne',sans-serif;font-weight:900;font-size:1rem;color:var(--accent);background:rgba(232,255,71,0.08);}
+.sst-img{width:46px;height:46px;object-fit:cover;border-radius:7px;border:1px solid var(--border);}
+.sst-img-ph{width:46px;height:46px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:0.9rem;}
+.sst tr:hover td{background:rgba(255,255,255,0.012);}
+.sst tr:hover td.tot-cell{background:rgba(232,255,71,0.07);}
+.sst-group-end td{border-bottom:2px solid var(--border) !important;}
+.sell-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--success);margin-left:3px;cursor:pointer;vertical-align:middle;opacity:0.7;}
+.sell-dot:hover{opacity:1;transform:scale(1.3);}
+/* inline qty editor */
+.qty-input-wrap{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:50;background:var(--surface);border:1px solid var(--accent);border-radius:6px;padding:2px;}
+.qty-input-wrap input{width:46px;text-align:center;background:transparent;border:none;color:var(--text);font-weight:700;font-size:0.85rem;outline:none;}
+
 </style>
 </head>
 <body>
@@ -230,10 +256,9 @@ tr:hover td{background:rgba(255,255,255,0.015);}
   <div class="auth-box">
     <div class="auth-logo">LETAX</div>
     <div class="auth-sub">Stock Record System</div>
-    <div class="auth-tabs">
-      <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
-      <button class="auth-tab" onclick="switchAuthTab('register')">Create Account</button>
-    </div>
+    <!-- Setup panel: only shown on first launch (no admin exists yet) -->
+    <div id="setupBanner" style="display:none;background:rgba(232,255,71,0.07);border:1px solid rgba(232,255,71,0.2);border-radius:10px;padding:0.75rem 1rem;margin-bottom:1.25rem;font-size:0.82rem;color:var(--accent);"><i class="fas fa-info-circle"></i> First-time setup — create your admin account below.</div>
+
     <div id="loginPanel">
       <div class="error-msg" id="loginError"></div>
       <div class="field"><label>Email</label><input type="email" id="loginEmail" placeholder="you@email.com"></div>
@@ -258,6 +283,7 @@ tr:hover td{background:rgba(255,255,255,0.015);}
     <div class="topnav-links">
       <button class="nav-btn active" onclick="nav('dashboard')" data-nav="dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>
       <button class="nav-btn" onclick="nav('stock')" data-nav="stock"><i class="fas fa-boxes"></i> Stock</button>
+      <button class="nav-btn" onclick="nav('stocktable')" data-nav="stocktable"><i class="fas fa-table"></i> Table</button>
       <button class="nav-btn" onclick="nav('sales')" data-nav="sales"><i class="fas fa-receipt"></i> Sales</button>
       <button class="nav-btn admin-only" onclick="nav('products')" data-nav="products"><i class="fas fa-box-open"></i> Products</button>
       <button class="nav-btn admin-only" onclick="nav('team')" data-nav="team"><i class="fas fa-users"></i> Team</button>
@@ -309,6 +335,17 @@ tr:hover td{background:rgba(255,255,255,0.015);}
         </div>
       </div>
       <div id="productGrid" class="products-grid"></div>
+    </section>
+
+    <!-- STOCK TABLE -->
+    <section id="sec-stocktable" class="section">
+      <div class="page-hd">
+        <div><div class="page-title">Stock Table</div><div class="page-sub">Spreadsheet view — click any qty to record a sale</div></div>
+        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+          <input type="text" placeholder="Filter by code/name..." id="sstSearch" oninput="renderStockTable()" style="padding:0.55rem 0.9rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.85rem;width:200px;">
+        </div>
+      </div>
+      <div id="sstContainer"></div>
     </section>
 
     <!-- SALES -->
@@ -370,6 +407,7 @@ tr:hover td{background:rgba(255,255,255,0.015);}
   <div class="mob-nav">
     <button class="mnb active" onclick="nav('dashboard')" data-mnav="dashboard"><i class="fas fa-chart-line"></i>Home</button>
     <button class="mnb" onclick="nav('stock')" data-mnav="stock"><i class="fas fa-boxes"></i>Stock</button>
+    <button class="mnb" onclick="nav('stocktable')" data-mnav="stocktable"><i class="fas fa-table"></i>Table</button>
     <button class="mnb" onclick="nav('sales')" data-mnav="sales"><i class="fas fa-receipt"></i>Sales</button>
     <button class="mnb admin-only" onclick="nav('products')" data-mnav="products"><i class="fas fa-box-open"></i>Products</button>
     <button class="mnb admin-only" onclick="nav('team')" data-mnav="team"><i class="fas fa-users"></i>Team</button>
@@ -528,7 +566,7 @@ tr:hover td{background:rgba(255,255,255,0.015);}
       <p style="color:var(--muted);margin-bottom:1.5rem;font-size:0.9rem;" id="deleteMsg">Are you sure?</p>
       <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
         <button class="btn btn-ghost" onclick="closeModal('deleteModal')">Cancel</button>
-        <button class="btn btn-danger" id="deleteConfirmBtn">Delete</button>
+        <button class="btn btn-danger" id="deleteConfirmBtn">Confirm</button>
       </div>
     </div>
   </div>
@@ -537,6 +575,9 @@ tr:hover td{background:rgba(255,255,255,0.015);}
 <!-- Toast -->
 <div class="toast" id="toast"><i class="fas fa-check-circle" id="toastIcon"></i><span id="toastMsg"></span></div>
 
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script>
 // ===== FIREBASE =====
 const firebaseConfig = {
@@ -578,16 +619,20 @@ let colorEntryCount=0, addStockCtx={}, editingCode=null;
 auth.onAuthStateChanged(user => {
   if (user) loadUser(user.uid);
   else {
-    document.getElementById('loadingScreen').style.display='none';
-    document.getElementById('authScreen').style.display='flex';
+    // Check if any admin account exists yet (first-time setup)
+    db.ref('users').orderByChild('role').equalTo('admin').limitToFirst(1).once('value', snap => {
+      const hasAdmin = snap.exists();
+      document.getElementById('loadingScreen').style.display='none';
+      document.getElementById('authScreen').style.display='flex';
+      if (!hasAdmin) {
+        // First launch: show setup banner and register form instead of login
+        document.getElementById('setupBanner').style.display='block';
+        document.getElementById('loginPanel').style.display='none';
+        document.getElementById('registerPanel').style.display='block';
+      }
+    });
   }
 });
-
-function switchAuthTab(t) {
-  document.querySelectorAll('.auth-tab').forEach((b,i)=>b.classList.toggle('active',(t==='login'&&i===0)||(t==='register'&&i===1)));
-  document.getElementById('loginPanel').style.display=t==='login'?'block':'none';
-  document.getElementById('registerPanel').style.display=t==='register'?'block':'none';
-}
 
 function doLogin() {
   const email=V('loginEmail'), pass=V('loginPassword');
@@ -603,10 +648,18 @@ function doRegister() {
   const shop=V('regShop'),name=V('regName'),email=V('regEmail'),pass=V('regPassword');
   if (!shop||!name||!email||!pass||pass.length<6){showErr('regError','Fill all fields (password min 6 chars)');return;}
   document.getElementById('loadingScreen').style.display='flex';
-  auth.createUserWithEmailAndPassword(email,pass)
-    .then(c=>db.ref('users/'+c.user.uid).set({name,email,role:'admin',shopName:shop,createdAt:firebase.database.ServerValue.TIMESTAMP}))
-    .then(()=>db.ref('shop').set({name:shop}))
-    .catch(e=>{document.getElementById('loadingScreen').style.display='none';showErr('regError',e.message);});
+  // Server-side guard: only allow if no admin exists yet
+  db.ref('users').orderByChild('role').equalTo('admin').limitToFirst(1).once('value', snap => {
+    if (snap.exists()) {
+      document.getElementById('loadingScreen').style.display='none';
+      showErr('regError','An admin account already exists. Ask your admin to add you from the Team panel.');
+      return;
+    }
+    auth.createUserWithEmailAndPassword(email,pass)
+      .then(c=>db.ref('users/'+c.user.uid).set({name,email,role:'admin',shopName:shop,createdAt:firebase.database.ServerValue.TIMESTAMP}))
+      .then(()=>db.ref('shop').set({name:shop}))
+      .catch(e=>{document.getElementById('loadingScreen').style.display='none';showErr('regError',e.message);});
+  });
 }
 
 function doLogout(){auth.signOut().then(()=>location.reload());}
@@ -637,7 +690,7 @@ function loadUser(uid) {
 function setupListeners(){
   db.ref('inventory').on('value',snap=>{
     inventory=snap.val()||{};
-    renderProductGrid(); renderCatalog(); updateStats(); renderLowStock();
+    renderProductGrid(); renderCatalog(); updateStats(); renderLowStock(); renderStockTable();
   });
   db.ref('sales').orderByChild('timestamp').limitToLast(300).on('value',snap=>{
     sales=[];
@@ -949,6 +1002,113 @@ function processSale(){
     .catch(e=>toast('Error: '+e.message,'err'));
 }
 
+
+// ===== STOCK SPREADSHEET TABLE =====
+function renderStockTable(){
+  const container = document.getElementById('sstContainer');
+  if (!container) return;
+  const q = (document.getElementById('sstSearch')?.value||'').toLowerCase();
+  const prods = Object.values(inventory).filter(p=>!q||p.name.toLowerCase().includes(q)||p.code.toLowerCase().includes(q));
+  if (!prods.length){
+    container.innerHTML='<div class="empty"><i class="fas fa-table"></i><p>'+(q?'No matching products':'No products yet')+' </p></div>';
+    return;
+  }
+
+  let html = '';
+  let rowNo = 0;
+  prods.forEach(p => {
+    rowNo++;
+    const sz = p.type==='clothing' ? CLOTH_SIZES : SHOE_SIZES;
+    const colors = Object.entries(p.colors||{});
+    const grandTotal = colors.reduce((a,[c,d])=>a+sz.reduce((b,s)=>b+(d[s]||0),0),0);
+    const firstImg = colors[0]?.[1]?.image||'';
+
+    // Build size header (only once per product)
+    html += `<div class="card" style="margin-bottom:1.5rem;">
+      <div class="card-hd" style="padding:0.85rem 1.2rem;">
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          ${firstImg
+            ? `<img src="${firstImg}" class="sst-img">`
+            : `<div class="sst-img-ph"><i class="fas fa-shoe-prints"></i></div>`}
+          <div>
+            <div class="sst-code">${p.code}</div>
+            <div style="font-weight:600;font-size:0.9rem;">${p.name}</div>
+            <div style="font-size:0.72rem;color:var(--muted);margin-top:0.1rem;">${p.type==='clothing'?'Clothing':'Shoes'} &nbsp;·&nbsp; <span style="color:var(--accent);">$${(p.unitPrice||0).toFixed(2)}</span></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <span style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;">Total</span>
+          <span style="font-family:'Syne',sans-serif;font-weight:900;font-size:1.4rem;color:var(--accent);">${grandTotal}</span>
+          <span style="font-size:0.72rem;color:var(--muted);">pcs</span>
+        </div>
+      </div>
+      <div class="sst-wrap">
+        <table class="sst">
+          <thead>
+            <tr>
+              <th style="text-align:left;min-width:36px;">NO</th>
+              <th style="text-align:left;min-width:60px;">COLOR</th>
+              <th style="text-align:left;min-width:52px;">PICTURE</th>
+              ${sz.map(s=>`<th>${s}</th>`).join('')}
+              <th style="background:rgba(232,255,71,0.06);">QTY/PCS</th>
+              <th style="background:rgba(232,255,71,0.1);">TOTAL PCS</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+    colors.forEach(([color, data], ci) => {
+      const colorTotal = sz.reduce((a,s)=>a+(data[s]||0),0);
+      const img = data.image||'';
+      const isLast = ci===colors.length-1;
+      html += `<tr class="${isLast?'sst-group-end':''}">
+        <td class="td-left" style="color:var(--muted);font-size:0.75rem;">${ci===0?rowNo:''}</td>
+        <td class="td-left"><span class="sst-color"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${CHEX[color]||'#888'};vertical-align:middle;margin-right:5px;"></span>${color}</span></td>
+        <td>${img?`<img src="${img}" class="sst-img" style="width:38px;height:38px;">`:`<div class="sst-img-ph" style="width:38px;height:38px;font-size:0.75rem;"><i class="fas fa-image"></i></div>`}</td>
+        ${sz.map(s=>{
+          const q=data[s]||0;
+          const qcls=q===0?'q-out':q<=3?'q-low':'q-ok';
+          return `<td class="qty-cell" title="Click to record 1 sold" onclick="quickSell('${p.code}','${color}','${s}',this)">
+            <span class="qty-val ${qcls}" id="qv-${p.code}-${color}-${s}">${q}</span>
+          </td>`;
+        }).join('')}
+        <td class="tot-cell">${colorTotal}</td>
+        ${ci===0?`<td class="grand-tot" rowspan="${colors.length}">${grandTotal}</td>`:''}
+      </tr>`;
+    });
+
+    html += `</tbody></table></div></div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+// Quick sell: click a cell to record 1 unit sold for that size/color
+function quickSell(code, color, size, cell){
+  if (currentRole !== 'admin' && currentRole !== 'manager') {
+    toast('Only admins and managers can record sales here','err'); return;
+  }
+  const p = inventory[code]; if (!p) return;
+  const current = p.colors?.[color]?.[size] || 0;
+  if (current <= 0){ toast('Out of stock!','err'); return; }
+
+  // Show confirm via existing modal
+  confirmDelete(
+    `Record 1 sold: ${p.name} — ${color} / Size ${size} (${current} → ${current-1} remaining)?`,
+    () => {
+      db.ref('inventory/'+code+'/colors/'+color+'/'+size).set(current-1)
+        .then(()=>db.ref('sales').push({
+          productCode:code, productName:p.name, productType:p.type,
+          color, size, price:p.unitPrice||0,
+          customer:'Walk-in', payment:'Cash',
+          soldBy:currentUser.uid, soldByName:currentUserData.name||currentUserData.email,
+          date:new Date().toISOString(), timestamp:firebase.database.ServerValue.TIMESTAMP
+        }))
+        .then(()=>toast('Sale recorded — '+p.name+' '+color+' sz'+size,'ok'))
+        .catch(e=>toast('Error: '+e.message,'err'));
+    }
+  );
+}
+
 // ===== SALES TABLE =====
 function renderSales(){
   const df=E('salesDate')?.value;
@@ -1043,8 +1203,11 @@ function toast(msg,type='ok'){
   clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3500);
 }
 function showErr(id,msg){const el=E(id);if(el){el.textContent=msg;el.classList.add('show');}}
-function confirmDelete(msg,fn){
+function confirmDelete(msg,fn,title){
   E('deleteMsg').textContent=msg;
+  // update modal title dynamically
+  const hd = document.querySelector('#deleteModal .modal-title');
+  if (hd) hd.textContent = title || 'Confirm';
   E('deleteConfirmBtn').onclick=()=>{fn();closeModal('deleteModal');};
   openModal('deleteModal');
 }
