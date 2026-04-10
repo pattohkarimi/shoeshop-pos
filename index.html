@@ -803,10 +803,18 @@ window.onclick=e=>{if(e.target.classList.contains('modal'))e.target.classList.re
 // ===== DASHBOARD =====
 function updateStats(){
   let tp=Object.keys(inventory).length,tu=0,tl=0,to=0;
+  const soldSizesSet={};
+  sales.forEach(s=>{soldSizesSet[`${s.productCode}|${s.color}|${s.size}`]=true;});
   Object.values(inventory).forEach(p=>{
     const sz=p.type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
-    Object.values(p.colors||{}).forEach(c=>{
-      sz.forEach(s=>{const q=c[s]||0;tu+=q;const wasStocked=(c[s]!==undefined&&c[s]>0)||(p.activeSizes&&p.activeSizes.includes(String(s)));if(wasStocked&&q===0)to++;else if(wasStocked&&q>0&&q<=3)tl++;});
+    Object.entries(p.colors||{}).forEach(([colorName,c])=>{
+      sz.forEach(s=>{
+        const q=c[s]||0; tu+=q;
+        const soldKey=`${p.code}|${colorName}|${s}`;
+        const isReal=(p.activeSizes&&p.activeSizes.map(String).includes(String(s)))||q>0||soldSizesSet[soldKey];
+        if(isReal&&q===0)to++;
+        else if(isReal&&q>0&&q<=3)tl++;
+      });
     });
   });
   const today=new Date().toDateString();
@@ -836,28 +844,31 @@ function renderActivity(){
 function renderLowStock(){
   const el=E('lowStockList');
   const alerts=[];
+
+  // Build a set of sizes that have been sold (these were definitely stocked once)
+  const soldSizes={}; // key: "code|color|size"
+  sales.forEach(s=>{ soldSizes[`${s.productCode}|${s.color}|${s.size}`]=true; });
+
   Object.values(inventory).forEach(p=>{
     const sz=p.type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
     Object.entries(p.colors||{}).forEach(([c,d])=>{
       sz.forEach(s=>{
         const q=d[s]||0;
-        // Only alert on sizes that were actually stocked (had qty > 0 at some point)
-        // A size with undefined or 0 that was never touched is not a real alert
-        const wasStocked = (p.activeSizes && p.activeSizes.includes(String(s))) || (d[s] !== undefined && d[s] > 0);
-        if(wasStocked && q<=3) alerts.push({name:p.name,code:p.code,color:c,size:s,qty:q});
-        // Also catch sizes that were sold down to 0 (they appear in sales)
+        const key=`${p.code}|${c}|${s}`;
+        // A size is "real" if:
+        // 1. It's in activeSizes (admin explicitly set it), OR
+        // 2. It has qty > 0 right now, OR
+        // 3. It has been sold before (was stocked, sold down)
+        const isReal = (p.activeSizes && p.activeSizes.map(String).includes(String(s)))
+                    || q > 0
+                    || soldSizes[key];
+        if(isReal && q <= 3){
+          alerts.push({name:p.name,code:p.code,color:c,size:s,qty:q});
+        }
       });
     });
   });
-  // Also add sizes sold to 0 (were stocked, now empty via sales)
-  sales.forEach(s=>{
-    const p=inventory[s.productCode]; if(!p) return;
-    const d=p.colors?.[s.color]; if(!d) return;
-    const q=d[s.size]||0;
-    if(q===0 && !alerts.find(a=>a.code===s.productCode&&a.color===s.color&&a.size===s.size)){
-      alerts.push({name:p.name,code:s.productCode,color:s.color,size:s.size,qty:0});
-    }
-  });
+
   if (!alerts.length){el.innerHTML='<div class="empty"><i class="fas fa-check-circle" style="color:var(--success);opacity:0.8;"></i><p style="color:var(--success);">All stock levels healthy</p></div>';return;}
   el.innerHTML=alerts.slice(0,12).map(a=>`
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 0;border-bottom:1px solid var(--border);">
@@ -875,6 +886,9 @@ const cardActiveColor = {};
 
 function renderProductGrid(){
   const grid=E('productGrid');
+  // Build sold-sizes lookup so we know which sizes were ever stocked
+  const soldSizesIndex={};
+  sales.forEach(s=>{soldSizesIndex[s.productCode+'|'+s.color+'|'+s.size]=true;});
   const q=(E('stockSearch')?.value||'').toLowerCase();
   const prods=Object.values(inventory).filter(p=>!q||p.name.toLowerCase().includes(q)||p.code.toLowerCase().includes(q));
   if (!prods.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1;"><i class="fas fa-box-open"></i><p>${q?'No results':'No products yet. Add your first product!'}</p></div>`;return;}
@@ -930,8 +944,9 @@ function renderProductGrid(){
         <div class="stock-pills" id="pills-${p.code}">
           ${sz.map(s=>{
             const q=activeData[s]||0;
-            const hasActiveSizes=!!(p.activeSizes&&p.activeSizes.length);
-            if(!hasActiveSizes && q===0) return '';
+            const soldKey=p.code+'|'+activeColor+'|'+s;
+            const isReal=(p.activeSizes&&p.activeSizes.map(String).includes(String(s)))||q>0||soldSizesIndex[soldKey];
+            if(!isReal) return '';
             return `<span class="spill ${q===0?'sp-out':q<=3?'sp-low':'sp-ok'}">${s}:${q}</span>`;
           }).join('')}
         </div>
