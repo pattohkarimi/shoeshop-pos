@@ -304,24 +304,55 @@ tr:hover td{background:rgba(255,255,255,0.015);}
 
     <!-- DASHBOARD -->
     <section id="sec-dashboard" class="section active">
-      <div class="page-hd">
-        <div><div class="page-title">Dashboard</div><div class="page-sub" id="dashDate"></div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:0.5rem;">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;">Good <span id="dashGreeting">morning</span> 👋</div>
+          <div style="color:var(--muted);font-size:0.85rem;margin-top:0.1rem;" id="dashDate"></div>
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="btn btn-ghost" onclick="nav('stock')" style="font-size:0.8rem;"><i class="fas fa-boxes"></i> Stock</button>
+          <button class="btn btn-accent" onclick="nav('sales')" style="font-size:0.8rem;"><i class="fas fa-receipt"></i> Sales</button>
+        </div>
       </div>
-      <div class="stats-row">
-        <div class="stat-box s-accent"><div class="stat-num" id="st-products">0</div><div class="stat-label">Products</div><div class="stat-sub">In catalog</div></div>
-        <div class="stat-box s-success"><div class="stat-num" id="st-units">0</div><div class="stat-label">Total Units</div><div class="stat-sub">In stock</div></div>
-        <div class="stat-box s-warn"><div class="stat-num" id="st-low">0</div><div class="stat-label">Low Stock</div><div class="stat-sub">≤ 3 units/size</div></div>
-        <div class="stat-box s-danger"><div class="stat-num" id="st-out">0</div><div class="stat-label">Out of Stock</div><div class="stat-sub">0 units</div></div>
-        <div class="stat-box s-success"><div class="stat-num" id="st-today">0</div><div class="stat-label">Today's Sales</div><div class="stat-sub" id="st-todayrev">$0.00 revenue</div></div>
+
+      <!-- KPI cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.85rem;margin-bottom:1.5rem;">
+        <div class="stat-box s-success" style="cursor:pointer;" onclick="nav('sales')">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.3rem;">Today's Revenue</div>
+          <div class="stat-num" id="st-todayrev" style="font-size:1.5rem;">$0</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;"><span id="st-today">0</span> sales today</div>
+        </div>
+        <div class="stat-box s-accent" style="cursor:pointer;" onclick="nav('stock')">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.3rem;">Total Units</div>
+          <div class="stat-num" id="st-units" style="font-size:1.5rem;">0</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;"><span id="st-products">0</span> products</div>
+        </div>
+        <div class="stat-box s-warn" style="cursor:pointer;" onclick="nav('stock')">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.3rem;">Low Stock</div>
+          <div class="stat-num" id="st-low" style="font-size:1.5rem;">0</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">sizes ≤ 3 units</div>
+        </div>
+        <div class="stat-box s-danger" style="cursor:pointer;" onclick="nav('stock')">
+          <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.3rem;">Out of Stock</div>
+          <div class="stat-num" id="st-out" style="font-size:1.5rem;">0</div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">sold-out sizes</div>
+        </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 360px;gap:1.5rem;">
+
+      <!-- Activity + Alerts -->
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:1.25rem;">
         <div class="card">
-          <div class="card-hd"><span class="card-title">Recent Activity</span><button class="btn btn-ghost" onclick="nav('sales')" style="padding:0.35rem 0.7rem;font-size:0.75rem;">View All</button></div>
-          <div id="activityFeed" style="padding:0 1.4rem;max-height:360px;overflow-y:auto;"></div>
+          <div class="card-hd">
+            <span class="card-title"><i class="fas fa-bolt" style="color:var(--accent);margin-right:0.4rem;font-size:0.8rem;"></i>Recent Sales</span>
+            <button class="btn btn-ghost" onclick="nav('sales')" style="padding:0.3rem 0.65rem;font-size:0.72rem;">All Sales →</button>
+          </div>
+          <div id="activityFeed" style="padding:0 1.4rem;max-height:340px;overflow-y:auto;"></div>
         </div>
         <div class="card">
-          <div class="card-hd"><span class="card-title"><i class="fas fa-exclamation-triangle" style="color:var(--warning);margin-right:0.4rem;font-size:0.85rem;"></i>Low Stock Alert</span></div>
-          <div id="lowStockList" style="padding:0 1.4rem;max-height:360px;overflow-y:auto;"></div>
+          <div class="card-hd">
+            <span class="card-title"><i class="fas fa-exclamation-triangle" style="color:var(--warning);margin-right:0.4rem;font-size:0.8rem;"></i>Needs Restocking</span>
+          </div>
+          <div id="lowStockList" style="padding:0 1.4rem;max-height:340px;overflow-y:auto;"></div>
         </div>
       </div>
     </section>
@@ -528,7 +559,10 @@ tr:hover td{background:rgba(255,255,255,0.015);}
         <div><div id="addStockName" style="font-family:'Syne',sans-serif;font-weight:700;"></div><div id="addStockMeta" style="color:var(--muted);font-size:0.8rem;margin-top:0.2rem;"></div></div>
       </div>
       <div style="margin-bottom:1.1rem;">
-        <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);margin-bottom:0.6rem;">Add Quantities by Size</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+          <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);" id="addStockModeLabel">Add Quantities by Size</div>
+          <button class="btn btn-ghost admin-only" id="addStockModeBtn" onclick="toggleStockEditMode()" style="padding:0.25rem 0.6rem;font-size:0.72rem;">✏️ Edit Existing Qty</button>
+        </div>
         <div class="asizes" id="addStockSizes"></div>
       </div>
       <div class="frow">
@@ -823,7 +857,11 @@ function updateStats(){
   E('st-products').textContent=tp; E('st-units').textContent=tu;
   E('st-low').textContent=tl; E('st-out').textContent=to;
   E('st-today').textContent=ts.length;
-  E('st-todayrev').textContent='$'+tr.toFixed(2)+' revenue';
+  E('st-todayrev').textContent='$'+tr.toFixed(2);
+  // Greeting
+  const hr=new Date().getHours();
+  const greet=hr<12?'morning':hr<17?'afternoon':'evening';
+  const greetEl=E('dashGreeting'); if(greetEl) greetEl.textContent=greet;
 }
 
 function renderActivity(){
@@ -859,10 +897,14 @@ function renderLowStock(){
         // 1. It's in activeSizes (admin explicitly set it), OR
         // 2. It has qty > 0 right now, OR
         // 3. It has been sold before (was stocked, sold down)
-        const isReal = (p.activeSizes && p.activeSizes.map(String).includes(String(s)))
-                    || q > 0
-                    || soldSizes[key];
-        if(isReal && q <= 3){
+        // Only alert if this size was SOLD before (proving it had real stock)
+        // OR it's in activeSizes AND qty dropped to ≤ 3 from something higher
+        const wasSold = soldSizes[key];
+        const inActive = p.activeSizes && p.activeSizes.map(String).includes(String(s));
+        // Never alert on sizes with q > 0 that haven't been sold yet - that's opening stock
+        if(wasSold && q <= 3){
+          alerts.push({name:p.name,code:p.code,color:c,size:s,qty:q});
+        } else if(inActive && q === 0 && wasSold){
           alerts.push({name:p.name,code:p.code,color:c,size:s,qty:q});
         }
       });
@@ -1139,9 +1181,12 @@ function openAddStockModal(code,color){
   E('addStockTotal').textContent='0';
   // Only show sizes active for this product
   const activeSz = p.activeSizes ? p.activeSizes.map(String) : sz.map(String);
+  addStockCtx.activeSz = activeSz;
+  addStockCtx.editMode = false;
+  E('addStockModeBtn').textContent = '✏️ Edit Existing Qty';
   E('addStockSizes').innerHTML=activeSz.map(s=>`
     <div class="asz">
-      <span>${s}<br><span style="color:var(--accent);font-weight:600;">${data[s]||0}</span></span>
+      <span>${s}<br><span style="color:var(--accent);font-weight:600;" id="cur-${s}">${data[s]||0}</span></span>
       <input type="number" min="0" value="0" id="as-${s}" oninput="calcASTotal()">
     </div>`).join('');
   openModal('addStockModal');
@@ -1161,16 +1206,56 @@ function saveAddStock(){
   const sz=p.type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
   const activeSz=p.activeSizes?p.activeSizes.map(String):sz.map(String);
   const updates={};let total=0;
+  const editMode = addStockCtx.editMode || false;
   activeSz.forEach(s=>{
-    const q=parseInt(E(`as-${s}`)?.value)||0;
-    if (q>0){updates[`inventory/${code}/colors/${color}/${s}`]=(p.colors[color]?.[s]||0)+q;total+=q;}
+    const inp = E(`as-${s}`);
+    const q = parseInt(inp?.value)||0;
+    if(editMode){
+      // Set exact quantity
+      const old = p.colors[color]?.[s]||0;
+      const diff = q - old;
+      updates[`inventory/${code}/colors/${color}/${s}`] = q;
+      total += Math.abs(diff);
+    } else {
+      // Add to existing
+      if(q>0){updates[`inventory/${code}/colors/${color}/${s}`]=(p.colors[color]?.[s]||0)+q;total+=q;}
+    }
   });
-  if (!total){toast('Enter at least one quantity','err');return;}
+  if (!total){toast('No changes made','err');return;}
   db.ref().update(updates)
     .then(()=>db.ref('stockMovements').push({type:'arrival',productCode:code,productName:p.name,color,totalAdded:total,supplier:V('as-supplier')||'—',invoice:V('as-invoice')||'—',user:currentUserData.name||currentUserData.email,timestamp:firebase.database.ServerValue.TIMESTAMP,date:new Date().toISOString()}))
     .then(()=>db.ref('logs').push({productName:p.name,color,size:'—',change:total,action:'restock',userName:currentUserData.name||currentUserData.email,timestamp:Date.now()}))
     .then(()=>{closeModal('addStockModal');toast(`Added ${total} units to ${p.name} ${color}`,'ok');})
     .catch(e=>toast('Error: '+e.message,'err'));
+}
+
+// ===== STOCK EDIT MODE =====
+function toggleStockEditMode(){
+  const ctx = addStockCtx;
+  const p = inventory[ctx.code]; if(!p) return;
+  const data = p.colors[ctx.color]||{};
+  ctx.editMode = !ctx.editMode;
+  const btn = E('addStockModeBtn');
+  const label = E('addStockModeLabel');
+  if(ctx.editMode){
+    btn.textContent = '➕ Back to Add Stock';
+    btn.style.color = 'var(--accent)';
+    label.textContent = 'Set Exact Quantity per Size';
+    // Switch inputs to show current qty as editable value
+    ctx.activeSz.forEach(s=>{
+      const inp = E(`as-${s}`);
+      if(inp){ inp.value = data[s]||0; inp.style.background='rgba(232,255,71,0.07)'; inp.style.borderColor='var(--accent)'; }
+    });
+  } else {
+    btn.textContent = '✏️ Edit Existing Qty';
+    btn.style.color = '';
+    label.textContent = 'Add Quantities by Size';
+    ctx.activeSz.forEach(s=>{
+      const inp = E(`as-${s}`);
+      if(inp){ inp.value = 0; inp.style.background=''; inp.style.borderColor=''; }
+    });
+  }
+  calcASTotal();
 }
 
 // ===== SELL =====
@@ -1298,11 +1383,8 @@ function renderStockTable(){
 
 // Quick sell: click a cell to record 1 unit sold for that size/color
 function quickSell(code, color, size, cell){
-  if (currentRole !== 'admin' && currentRole !== 'manager') {
-    toast('Only admins and managers can record sales here','err'); return;
-  }
-  if (!isShopDevice()) {
-    toast('Only the registered shop device can record sales here','err'); return;
+  if (currentRole === 'worker') {
+    toast('Workers cannot use the quick-sell table. Use the Sell button on the Stock page.','err'); return;
   }
   const p = inventory[code]; if (!p) return;
   const current = p.colors?.[color]?.[size] || 0;
