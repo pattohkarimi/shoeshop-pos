@@ -879,7 +879,9 @@ function renderProductGrid(){
   const prods=Object.values(inventory).filter(p=>!q||p.name.toLowerCase().includes(q)||p.code.toLowerCase().includes(q));
   if (!prods.length){grid.innerHTML=`<div class="empty" style="grid-column:1/-1;"><i class="fas fa-box-open"></i><p>${q?'No results':'No products yet. Add your first product!'}</p></div>`;return;}
   grid.innerHTML=prods.map(p=>{
-    const sz=p.type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
+    const allSz=p.type==='clothing'?CLOTH_SIZES:SHOE_SIZES;
+    // Only iterate over this product's active sizes
+    const sz=p.activeSizes?p.activeSizes.map(String):allSz.map(String);
     const colors=Object.entries(p.colors||{});
     if(!colors.length) return '';
     // Use persisted active color or default to first
@@ -892,29 +894,46 @@ function renderProductGrid(){
     const sl=activeTotal===0?'Out of stock':activeTotal<=5?`Low: ${activeTotal}`:`${activeTotal} units`;
     const totalAll=colors.reduce((a,[c,d])=>a+sz.reduce((b,s)=>b+(d[s]||0),0),0);
     return `<div class="product-card" onclick="openViewModal('${p.code}','${activeColor}')">
-      ${activeImg?`<img class="product-img" src="${activeImg}" alt="${p.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">`:``}
-      <div class="product-img-ph" style="${activeImg?'display:none;':''}"><i class="fas fa-shoe-prints"></i></div>
+      <div style="position:relative;">
+        ${activeImg?`<img class="product-img" src="${activeImg}" alt="${p.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">`:``}
+        <div class="product-img-ph" style="${activeImg?'display:none;':''}"><i class="fas fa-shoe-prints"></i></div>
+        <div style="position:absolute;top:0.5rem;right:0.5rem;background:rgba(0,0,0,0.65);border-radius:6px;padding:0.2rem 0.5rem;font-size:0.65rem;font-weight:700;color:var(--accent);backdrop-filter:blur(4px);">${totalAll} units</div>
+      </div>
       <div class="product-info">
-        <div class="product-code" style="display:flex;justify-content:space-between;align-items:center;">
-          <span>${p.code}</span>
-          <span style="font-size:0.65rem;color:var(--muted);">${totalAll} total units</span>
-        </div>
-        <div class="product-name">${p.name}</div>
-        <div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.6rem;" id="colortabs-${p.code}">
+        <div style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);margin-bottom:0.2rem;">${p.code}</div>
+        <div class="product-name" style="margin-bottom:0.55rem;">${p.name}</div>
+
+        <!-- Color tabs -->
+        <div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-bottom:0.65rem;">
           ${colors.map(([c,d])=>{
             const ct=sz.reduce((a,s)=>a+(d[s]||0),0);
             const isActive=c===activeColor;
-            return `<button onclick="event.stopPropagation();switchCardColor('${p.code}','${c}')" style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.22rem 0.55rem;border-radius:6px;border:1px solid ${isActive?'var(--accent)':'var(--border)'};background:${isActive?'rgba(232,255,71,0.1)':'transparent'};cursor:pointer;font-size:0.7rem;font-weight:600;color:${isActive?'var(--accent)':'var(--muted)'};transition:all 0.15s;">
-              <span style="width:8px;height:8px;border-radius:50%;background:${CHEX[c]||'#888'};flex-shrink:0;"></span>${c}
-              <span style="font-size:0.6rem;opacity:0.7;">${ct}</span>
+            const statusColor=ct===0?'var(--danger)':ct<=5?'var(--warning)':'var(--success)';
+            return `<button onclick="event.stopPropagation();switchCardColor('${p.code}','${c}')" style="display:inline-flex;align-items:center;gap:0.3rem;padding:0.25rem 0.6rem;border-radius:99px;border:1.5px solid ${isActive?'var(--accent)':'var(--border)'};background:${isActive?'rgba(232,255,71,0.1)':'transparent'};cursor:pointer;font-size:0.72rem;font-weight:600;color:${isActive?'var(--accent)':'var(--muted)'};transition:all 0.15s;">
+              <span style="width:7px;height:7px;border-radius:50%;background:${CHEX[c]||'#888'};flex-shrink:0;"></span>
+              ${c}
+              <span style="font-size:0.62rem;color:${statusColor};font-weight:700;">${ct}</span>
             </button>`;
           }).join('')}
         </div>
-        <div class="product-color-row">
+
+        <!-- Active color stock status -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+          <span style="font-size:0.72rem;color:var(--muted);">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${CHEX[activeColor]||'#888'};margin-right:4px;vertical-align:middle;"></span>
+            ${activeColor}
+          </span>
           <span class="badge ${sc}" style="font-size:0.62rem;">${sl}</span>
         </div>
+
+        <!-- Size pills for active color only -->
         <div class="stock-pills" id="pills-${p.code}">
-          ${sz.map(s=>{const q=activeData[s]||0;if(q===0&&activeData[s]===undefined)return'';return `<span class="spill ${q===0?'sp-out':q<=3?'sp-low':'sp-ok'}">${s}:${q}</span>`;}).join('')}
+          ${sz.map(s=>{
+            const q=activeData[s]||0;
+            const hasActiveSizes=!!(p.activeSizes&&p.activeSizes.length);
+            if(!hasActiveSizes && q===0) return '';
+            return `<span class="spill ${q===0?'sp-out':q<=3?'sp-low':'sp-ok'}">${s}:${q}</span>`;
+          }).join('')}
         </div>
       </div>
       <div class="product-actions">
@@ -1423,4 +1442,3 @@ function confirmDelete(msg,fn,title){
 </script>
 </body>
 </html>
-
