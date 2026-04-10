@@ -327,12 +327,12 @@ tr:hover td{background:rgba(255,255,255,0.015);}
           <div class="stat-num" id="st-units" style="font-size:1.5rem;">0</div>
           <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;"><span id="st-products">0</span> products</div>
         </div>
-        <div class="stat-box s-warn" style="cursor:pointer;" onclick="nav('stock')">
+        <div class="stat-box s-warn" style="cursor:pointer;" onclick="scrollToAlerts()">
           <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.3rem;">Low Stock</div>
           <div class="stat-num" id="st-low" style="font-size:1.5rem;">0</div>
           <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">sizes ≤ 3 units</div>
         </div>
-        <div class="stat-box s-danger" style="cursor:pointer;" onclick="nav('stock')">
+        <div class="stat-box s-danger" style="cursor:pointer;" onclick="scrollToAlerts()">
           <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:0.3rem;">Out of Stock</div>
           <div class="stat-num" id="st-out" style="font-size:1.5rem;">0</div>
           <div style="font-size:0.72rem;color:var(--muted);margin-top:0.2rem;">sold-out sizes</div>
@@ -845,9 +845,11 @@ function updateStats(){
       sz.forEach(s=>{
         const q=c[s]||0; tu+=q;
         const soldKey=`${p.code}|${colorName}|${s}`;
-        const isReal=(p.activeSizes&&p.activeSizes.map(String).includes(String(s)))||q>0||soldSizesSet[soldKey];
-        if(isReal&&q===0)to++;
-        else if(isReal&&q>0&&q<=3)tl++;
+        const inActive=p.activeSizes&&p.activeSizes.map(String).includes(String(s));
+        const wasSold=soldSizesSet[soldKey];
+        const isReal=inActive||q>0||wasSold;
+        if(isReal&&q===0&&wasSold)to++;       // out = sold down to zero
+        else if(isReal&&q>0&&q<=3)tl++;       // low = has some stock but ≤3
       });
     });
   });
@@ -879,12 +881,19 @@ function renderActivity(){
     </div>`).join('');
 }
 
+function scrollToAlerts(){
+  // Stay on dashboard and scroll the Needs Restocking panel into view
+  nav('dashboard');
+  setTimeout(()=>{
+    const el=document.getElementById('lowStockList');
+    if(el) el.closest('.card')?.scrollIntoView({behavior:'smooth',block:'center'});
+  },100);
+}
+
 function renderLowStock(){
   const el=E('lowStockList');
   const alerts=[];
-
-  // Build a set of sizes that have been sold (these were definitely stocked once)
-  const soldSizes={}; // key: "code|color|size"
+  const soldSizes={};
   sales.forEach(s=>{ soldSizes[`${s.productCode}|${s.color}|${s.size}`]=true; });
 
   Object.values(inventory).forEach(p=>{
@@ -893,32 +902,41 @@ function renderLowStock(){
       sz.forEach(s=>{
         const q=d[s]||0;
         const key=`${p.code}|${c}|${s}`;
-        // A size is "real" if:
-        // 1. It's in activeSizes (admin explicitly set it), OR
-        // 2. It has qty > 0 right now, OR
-        // 3. It has been sold before (was stocked, sold down)
-        // Only alert if this size was SOLD before (proving it had real stock)
-        // OR it's in activeSizes AND qty dropped to ≤ 3 from something higher
-        const wasSold = soldSizes[key];
-        const inActive = p.activeSizes && p.activeSizes.map(String).includes(String(s));
-        // Never alert on sizes with q > 0 that haven't been sold yet - that's opening stock
-        if(wasSold && q <= 3){
-          alerts.push({name:p.name,code:p.code,color:c,size:s,qty:q});
-        } else if(inActive && q === 0 && wasSold){
-          alerts.push({name:p.name,code:p.code,color:c,size:s,qty:q});
+        const inActive=p.activeSizes&&p.activeSizes.map(String).includes(String(s));
+        const wasSold=soldSizes[key];
+        const isReal=inActive||q>0||wasSold;
+        // Low: real size with 1–3 units
+        if(isReal && q>0 && q<=3){
+          alerts.push({name:p.name,code:p.code,color:c,size:s,qty:q,type:'low'});
+        }
+        // Out: real size sold down to zero
+        if(isReal && q===0 && wasSold){
+          alerts.push({name:p.name,code:p.code,color:c,size:s,qty:0,type:'out'});
         }
       });
     });
   });
 
-  if (!alerts.length){el.innerHTML='<div class="empty"><i class="fas fa-check-circle" style="color:var(--success);opacity:0.8;"></i><p style="color:var(--success);">All stock levels healthy</p></div>';return;}
-  el.innerHTML=alerts.slice(0,12).map(a=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.7rem 0;border-bottom:1px solid var(--border);">
-      <div>
-        <div style="font-size:0.85rem;font-weight:500;">${a.name}</div>
-        <div style="font-size:0.73rem;color:var(--muted);">${a.color} · Size ${a.size}</div>
+  if (!alerts.length){
+    el.innerHTML='<div class="empty"><i class="fas fa-check-circle" style="color:var(--success);opacity:0.8;"></i><p style="color:var(--success);">All stock levels healthy</p></div>';
+    return;
+  }
+
+  // Sort: out of stock first, then low stock, then by product name
+  alerts.sort((a,b)=>(a.type==='out'?0:1)-(b.type==='out'?0:1)||(a.name>b.name?1:-1));
+
+  el.innerHTML=alerts.map(a=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.65rem 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="nav('stock')">
+      <div style="display:flex;align-items:center;gap:0.6rem;">
+        <div style="width:28px;height:28px;border-radius:6px;background:${a.type==='out'?'rgba(248,113,113,0.12)':'rgba(251,191,36,0.12)'};display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:${a.type==='out'?'var(--danger)':'var(--warning)'};">
+          <i class="fas ${a.type==='out'?'fa-times-circle':'fa-exclamation-circle'}"></i>
+        </div>
+        <div>
+          <div style="font-size:0.82rem;font-weight:600;">${a.name}</div>
+          <div style="font-size:0.7rem;color:var(--muted);">${a.color} · Size ${a.size}</div>
+        </div>
       </div>
-      <span class="badge ${a.qty===0?'b-red':'b-yellow'}">${a.qty===0?'Out':'Low: '+a.qty}</span>
+      <span class="badge ${a.type==='out'?'b-red':'b-yellow'}" style="font-size:0.65rem;white-space:nowrap;">${a.type==='out'?'Out':'Low: '+a.qty}</span>
     </div>`).join('');
 }
 
@@ -1539,3 +1557,4 @@ function confirmDelete(msg,fn,title){
 </script>
 </body>
 </html>
+<!-- scrollToAlerts injected -->
